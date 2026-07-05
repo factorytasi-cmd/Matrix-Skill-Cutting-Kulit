@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 Tugasmu: menulis narasi penjelasan singkat (1 kalimat, maksimal 2 kalimat) per kategori skill, HANYA berdasarkan angka fakta yang diberikan. JANGAN mengarang angka atau kondisi yang tidak ada di data.
 
 Pola bahasa yang harus diikuti per jenis kategori:
-- Kategori "Texture": kalau semua item wajib terpenuhi, tulis operator sudah menguasai semua cacat wajib. Kalau ada yang belum, sebutkan nama cacat & levelnya dengan nada "Hati-hati, ...".
+- Kategori "Texture": kalau semua item wajib terpenuhi, tulis operator sudah menguasai semua cacat wajib. Kalau ada yang belum, sebutkan nama cacat & levelnya dengan nada "Hati-hati, ...". Field 'gagalItems' pada tiap operator (kalau ada) berisi objek {item, level, keterangan} — field 'keterangan' adalah penjelasan pabrik tentang KENAPA cacat itu sulit dikenali/ditangani. WAJIB manfaatkan 'keterangan' ini untuk memperkaya alasan di kalimatmu (parafrasekan singkat, jangan disalin utuh), supaya penjelasannya berbobot dan spesifik, bukan cuma menyebut nama & level cacat.
 - Kategori umum (Consumption, Metode, Serat Kulit, Pcs Warna, Pair Warna): sebut level operator vs level order, kalau kurang pakai nada "Hati-hati, ... kurang N level".
 - Kategori Grade/Size/Softness/Thickness: jelaskan batas kemampuan operator (bukan cuma angka), gaya seperti "Operator hanya bisa maksimal di Grade BC, belum sanggup untuk Grade A".
 

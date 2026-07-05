@@ -366,16 +366,28 @@ function operatorLabelFor(op, cat){
   if (cat === 'Thickness') return op.thickness;
 }
 
-// ─── KELEMAHAN (WARNING) — independen dari form order ───────
-// Menandai atribut operator yang perlu diawasi meski kategorinya
-// tidak sedang dicek di form. Tambahkan aturan baru di sini seiring
-// kategori lain dibahas.
-function computeWeaknesses(op){
-  const warnings = [];
+// ─── WEAKNESS (risiko SAAT INI) & NEED UPGRADING (rekomendasi ke depan) ───
+// Keduanya independen dari form order, dianalisa dari level Texture &
+// Consumption operator. Tambahkan aturan baru di sini seiring kategori
+// lain dibahas.
+function computeWeaknesses(op, texturePerCat){
+  const notes = [];
   if (op.Consumption === 1){
-    warnings.push('Consumption material operator ini boros (level 1) — perlu diawasi saat cutting untuk order ini.');
+    notes.push('Consumption material operator ini boros (level 1) — perlu diawasi saat cutting untuk order ini.');
   }
-  return warnings;
+  if (texturePerCat && texturePerCat.ok && texturePerCat.buffer === 0){
+    notes.push('Level Texture operator pas-pasan dengan kebutuhan order ini (tanpa margin) — berisiko kalau ada variasi kualitas kulit.');
+  }
+  return notes;
+}
+function computeNeedUpgrading(op){
+  const notes = [];
+  const maxTextureLevel = Math.max(...NON_KARAKTER['Texture'].map(x => x.level));
+  if (op.Texture < maxTextureLevel){
+    const toughest = NON_KARAKTER['Texture'].filter(x => x.level === maxTextureLevel).map(x => x.item).join(', ');
+    notes.push('Texture operator masih level '+op.Texture+' dari maksimal '+maxTextureLevel+' — perlu ditingkatkan supaya sanggup menangani cacat level tinggi seperti '+toughest+' untuk order-order berikutnya.');
+  }
+  return notes;
 }
 
 // ─── NAV SWITCH ────────────────────────────────────────────
@@ -415,7 +427,7 @@ const STATUS_META = {
 };
 
 function renderCekKelayakan(reset){
-  if (reset){ lastMatch = null; groupAiState = { optimal: 'idle', overskill: 'idle', berpotensi: 'idle', tidak: 'idle' }; expandedGroups = { optimal: false, overskill: false, berpotensi: false, tidak: false }; }
+  if (reset){ lastMatch = null; expandedGroups = { optimal: false, overskill: false, berpotensi: false, tidak: false }; }
 
   // NOTE: sengaja bertahap — kategori lain (Consumption, Metode, Serat Kulit,
   // Pcs Warna, Pair Warna, Grade, Size, Softness, Thickness) akan ditambahkan
@@ -551,8 +563,10 @@ function runMatch(){
     const totalGap = perCat.reduce((s,p) => s + p.gap, 0);
     const narratives = {};
     relevantCats.forEach(cat => { narratives[cat] = narrativeFor(cat, op, reqInfo[cat]); });
-    const weaknesses = computeWeaknesses(op);
-    return { op, perCat, layak, score, totalGap, narratives, weaknesses };
+    const texturePerCat = perCat.find(p => p.cat === 'Texture');
+    const weaknesses = computeWeaknesses(op, texturePerCat);
+    const needUpgrading = computeNeedUpgrading(op);
+    return { op, perCat, layak, score, totalGap, narratives, weaknesses, needUpgrading };
   });
 
   const layakList = results.filter(r => r.layak);
@@ -580,53 +594,11 @@ function runMatch(){
   results.sort((a,b) => STATUS_META[a.status].rank - STATUS_META[b.status].rank || a.totalGap - b.totalGap || b.score - a.score);
 
   lastMatch = { reqInfo, relevantCats, results, gapRecommend };
-  groupAiState = { optimal: 'idle', overskill: 'idle', berpotensi: 'idle', tidak: 'idle' };
   expandedGroups = { optimal: false, overskill: false, berpotensi: false, tidak: false };
   renderMatchResult();
 }
 
-let groupAiState = { optimal: 'idle', overskill: 'idle', berpotensi: 'idle', tidak: 'idle' }; // idle | loading | done | error
 let expandedGroups = { optimal: false, overskill: false, berpotensi: false, tidak: false };
-
-// ─── AI NARRATIVE ON-DEMAND (Vercel + Claude API), per grup status ──
-// Perhitungan level/status TETAP rule-based (di atas). Tombol ini hanya
-// memperhalus kalimat narasi untuk grup yang dipilih saja — supaya hemat
-// token (tidak generate 40 operator sekaligus tiap kali cek order).
-function generateGroupNarrative(status){
-  const { relevantCats, results } = lastMatch;
-  const group = results.filter(r => r.status === status);
-  if (!group.length) return;
-
-  const facts = [];
-  group.forEach(r => {
-    relevantCats.forEach(cat => {
-      const p = r.perCat.find(x => x.cat === cat);
-      const entry = { absen: r.op.absen, nama: r.op.nama, cat, opLvl: p.opLvl, reqLvl: p.reqLvl, ok: p.ok, gap: p.gap };
-      if (cat === 'Texture') entry.gagalItems = lastMatch.reqInfo['Texture'].wajibItems.filter(it => it.level > p.opLvl).map(it => it.item+' (level '+it.level+')');
-      facts.push(entry);
-    });
-  });
-
-  groupAiState[status] = 'loading';
-  renderMatchResult();
-
-  fetch('/api/narrate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ facts })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.error){ groupAiState[status] = 'error:'+data.error; renderMatchResult(); return; }
-    group.forEach(r => {
-      const aiForOp = data.narratives[r.op.absen];
-      if (aiForOp) relevantCats.forEach(cat => { if (aiForOp[cat]) r.narratives[cat] = aiForOp[cat]; });
-    });
-    groupAiState[status] = 'done';
-    renderMatchResult();
-  })
-  .catch(() => { groupAiState[status] = 'error:AI tidak terjangkau'; renderMatchResult(); });
-}
 
 function toggleGroup(status){
   expandedGroups[status] = !expandedGroups[status];
@@ -663,12 +635,14 @@ function renderMatchResult(){
     const meta = STATUS_META[r.status];
     const catCells = relevantCats.map(cat => '<td>'+r.narratives[cat]+'</td>').join('');
     const weaknessCell = '<td>'+(r.weaknesses.length ? '⚠️ '+r.weaknesses.join('<br>⚠️ ') : '—')+'</td>';
+    const needUpgradingCell = '<td>'+(r.needUpgrading.length ? '📈 '+r.needUpgrading.join('<br>📈 ') : '—')+'</td>';
     return '<tr class="'+meta.rowClass+'">'
       + '<td class="name-cell">'+r.op.nama+'</td>'
       + '<td>'+r.op.absen+'</td>'
       + '<td><b>'+meta.dot+' '+meta.label+'</b></td>'
-      + catCells
       + weaknessCell
+      + needUpgradingCell
+      + catCells
       + '</tr>';
   }).join('');
 
@@ -676,12 +650,6 @@ function renderMatchResult(){
     const meta = STATUS_META[st];
     const n = counts[st];
     const isOpen = !!expandedGroups[st];
-    const state = groupAiState[st];
-    let aiLabel;
-    if (state === 'loading'){ aiLabel = '⏳ Membuat narasi AI...'; }
-    else if (state === 'done'){ aiLabel = '✅ Narasi AI selesai (klik untuk ulang)'; }
-    else if (state && state.startsWith('error')){ aiLabel = '⚠️ Gagal — coba lagi'; }
-    else { aiLabel = '✨ Generate Narasi AI'; }
 
     const group = results.filter(r => r.status === st);
     const tableHtml = isOpen ? `
@@ -689,8 +657,8 @@ function renderMatchResult(){
         <table class="op-table report-table">
           <thead><tr>
             <th>Nama</th><th>No. Absen</th><th>Status Untuk Order</th>
+            <th>Weakness</th><th>Need Upgrading</th>
             ${relevantCats.map(c=>'<th>'+c+'</th>').join('')}
-            <th>Kelemahan</th>
           </tr></thead>
           <tbody>${buildGroupRows(group)}</tbody>
         </table>
@@ -699,12 +667,9 @@ function renderMatchResult(){
 
     return `
       <div class="form-card" style="margin-bottom:10px;padding:12px 14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-          <button class="btn btn-ghost" style="text-align:left" ${n===0?'disabled':''} onclick="toggleGroup('${st}')">
-            ${isOpen?'▾':'▸'} ${meta.dot} ${meta.label} <span class="mono" style="opacity:.7">(${n})</span>
-          </button>
-          ${isOpen ? '<button class="btn btn-ghost" '+(state==='loading'||n===0?'disabled':'')+' onclick="generateGroupNarrative(\''+st+'\')">'+aiLabel+'</button>' : ''}
-        </div>
+        <button class="btn btn-ghost" style="text-align:left" ${n===0?'disabled':''} onclick="toggleGroup('${st}')">
+          ${isOpen?'▾':'▸'} ${meta.dot} ${meta.label} <span class="mono" style="opacity:.7">(${n})</span>
+        </button>
         ${tableHtml}
       </div>
     `;
@@ -712,7 +677,7 @@ function renderMatchResult(){
 
   document.getElementById('matchResult').innerHTML = `
     ${summaryHtml}
-    <p class="section-desc" style="margin-top:-6px">Klik salah satu grup di bawah untuk lihat daftar operatornya. Narasi default berbasis logic (gratis, instan) — tombol "Generate Narasi AI" di dalam grup untuk memperhalus kalimat, supaya hemat token (per grup, bukan 40 operator sekaligus).</p>
+    <p class="section-desc" style="margin-top:-6px">Klik salah satu grup di bawah untuk lihat daftar operatornya, lengkap dengan catatan Weakness (risiko saat ini) dan Need Upgrading (rekomendasi training ke depan).</p>
     ${gapHtml}
     ${groupSectionsHtml}
   `;
