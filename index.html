@@ -402,7 +402,8 @@ const STATUS_META = {
   tidak:      { label: 'Tidak Layak',     rank: 3, rowClass: 'row-tidak',    dot: '🔴' }
 };
 
-function renderCekKelayakan(){
+function renderCekKelayakan(reset){
+  if (reset){ lastMatch = null; groupAiState = { optimal: 'idle', overskill: 'idle', berpotensi: 'idle', tidak: 'idle' }; }
   const formHtml = GENERIC_DROPDOWN_CATS.concat(CATS_KARAKTER_DROPDOWN).map(cat => {
     let options;
     if (GENERIC_DROPDOWN_CATS.includes(cat)){
@@ -450,11 +451,12 @@ function renderCekKelayakan(){
       <div class="form-grid">${textureHtml}${formHtml}${manualHtml}</div>
       <div style="margin-top:14px;display:flex;gap:8px">
         <button class="btn btn-primary" onclick="runMatch()">Cek Kelayakan</button>
-        <button class="btn btn-ghost" onclick="renderCekKelayakan()">Reset Form</button>
+        <button class="btn btn-ghost" onclick="renderCekKelayakan(true)">Reset Form</button>
       </div>
     </div>
     <div id="matchResult"></div>
   `;
+  if (lastMatch) renderMatchResult();
 }
 
 // ─── NARRATIVE GENERATORS ───────────────────────────────────
