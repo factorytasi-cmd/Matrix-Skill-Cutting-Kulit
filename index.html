@@ -6,6 +6,7 @@
 <title>LITRA-ASI — Skill Matrix Cutting Kulit</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   :root{
     --bg:#0B0C0B; --bg-1:#111310; --surface:#15160F; --surface-2:#1A1C17;
@@ -174,7 +175,7 @@
 <div class="appbar">
   <div class="appbar-title">Skill Matrix Intelligence — Cutting Kulit</div>
   <div class="appbar-right">
-    <div class="live-badge"><div class="live-dot"></div><span>40 Operator Termuat</span></div>
+    <div class="live-badge"><div class="live-dot" id="liveDot"></div><span id="liveBadgeText">Menyambungkan ke Google Sheets...</span></div>
     <span class="mono" id="dateNow" style="font-size:11px;color:var(--text-3)"></span>
   </div>
 </div>
@@ -242,9 +243,94 @@
 </div>
 
 <script>
-const NON_KARAKTER = {"Texture": [{"item": "Cacat", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Mengelupas", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Rapuh", "level": 4, "ket": "Jenis kulit rapuh paling sulit dipahami, karena terkadang terlihat dari segi tekstur yang kering. tapi ada beberapa kulit, yang seperti padat dan tidak kering tapi ternyata rapuh"}, {"item": "Sirata", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Buff", "level": 2, "ket": "Buff merupakan permukaan kulit yang porinya menghilang, tapi tidak sampai terlihat suede nya. Sulit untuk menhindari karena cukup samar jika dilihat dari jarak pandang biasa bukan dekat"}, {"item": "Singkayo", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Bercak Hitam", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Bercak Putih", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Gembos", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Snai", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Texture Tidak Rata", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "BF", "level": 3, "ket": "Tekstur kulit campuran, antara Buff dengan yang pori nya terlihat. terkadang operator cutting salah menempatak Cetakan Potong yang dimana harusnya ada yang buff dan ada porinya, malah seringnya full Buff"}], "Consumption": [{"item": "Irit", "level": 3, "ket": "arti irit adalah dapat menghasilkan lebih banyak hasil cutting dibandingkan perintah kerja. ini tidak mudah karena butuh pemahaman khusus agar hasil cutting melelbihi perintah kerja dengan kualitas yang baik"}, {"item": "Normal", "level": 2, "ket": "Consumption Normal adalah menghasilkan hasil cutting sesuai dengan perintah kerja, dengan kualitas yang baik"}, {"item": "Boros", "level": 1, "ket": "Consumption Boros adalah menghasilkan hasil cutting lebih rendah dari perintah kerja, atau hasil cutting memiliki kualitas yang buruk sehingga tidak bisa dipakai"}], "Metode": [{"item": "Toggle", "level": 1, "ket": "Proses termudah dalam flow cutting kulit"}, {"item": "Patch Ibu Jari", "level": 2, "ket": "Proses cutting hanya 2 part, dan mudah"}, {"item": "Combo + Thumb Full + Machi", "level": 3, "ket": "Proses cukup mudah, karena jika ada machi maka sisaan kulit bisa digunakan untuk machi, sehingga area-area sulit bisa di alokasikan untuk machi"}, {"item": "Combo + Thumb Full + Tanpa Machi", "level": 5, "ket": "Proses cutting tersulit, karena beberapa area kritis pada kulit harus di cutting untuk Pola Body dan Ibu Jari Full, dimana hasil cutting pola body dan ibu jari harus bagus untuk menghasilkan glove yang bagus"}, {"item": "Combo + Thumb Combo + Machi", "level": 3, "ket": "Proses cukup mudah, karena jika ada machi maka sisaan kulit bisa digunakan untuk machi, sehingga area-area sulit bisa di alokasikan untuk machi"}, {"item": "Combo + Thumb Combo + Tanpa Machi", "level": 4, "ket": "Proses cutting tersulit, karena beberapa area kritis pada kulit harus di cutting untuk Pola Body, dimana hasil cutting pola body dan ibu jari harus bagus untuk menghasilkan glove yang bagus. namun karena ibu jari nya bukan full, sehingga area kritis pada kulit dapat di alokasikan untuk ibu jari combo yang dimana hasil cutting kurang baik masih bisa OK untuk glove"}, {"item": "Pola Full", "level": 3, "ket": "Proses cukup mudah, karena jika ada machi maka sisaan kulit bisa digunakan untuk machi, sehingga area-area sulit bisa di alokasikan untuk machi"}], "Serat Kulit": [{"item": "Lear Leor", "level": 3, "ket": "Serat Lear Leor adalah serat yang ada ke segala arah, sehingga operator cutting tidak mudah menentukan arah cetakan cutting, perlu pengetahuan dan metode khusus"}, {"item": "Normal", "level": 1, "ket": "Serat Normal adalah serat yang umum ada pada kulit, sehingga operator cutting dapat menentukan arah cetakan dengan mudah"}, {"item": "Gombor", "level": 2, "ket": "Serat Gombor adalah serat yang besar, ini tidak baik untuk hasil jadi glove, operator cutting tidak bisa langusng melakukan proses cutting, tetapi harus memperbaiki dulu arah serat nya"}, {"item": "Ngaret", "level": 3, "ket": "Serat Ngaret adalah arah serat yang selalu memberikan elastisitas seperti karet, bukan yang memanjang, ini perlu metode khusus agar operator bisa membedakan mana serat ngaret mana salah arah serat"}], "Pcs Warna": [{"item": "Putih (Snow White, Wet White)", "level": 1, "ket": "meng-cutting kulit pcs warna putih itu mudah, karena antar part/panel satu dengan yang lainnya secara warna lebih mirip, dikarenakan warna dalam 1 lembar kulit stabil"}, {"item": "Natural/Black", "level": 2, "ket": "meng-cutting kulit pcs warna Natural/Black itu kesulitan medium/sedang, karena antar part/panel satu dengan yang lainnya ada kemungkinan beda warna mesikipun tidak jauh"}, {"item": "Warna", "level": 3, "ket": "meng-cutting kulit pcs warna itu kesulitannya tinggi, karena 1 lembar kulit ada kemungkinan shading warna, sehingga peluang antara part/panel satu dengan lainyya akan berbeda warnanya dan mempengaruhi hasil akhir"}], "Pair Warna": [{"item": "Putih (Snow White, Wet White)", "level": 1, "ket": "meng-cutting kulit pair warna putih itu mudah, karena antar part/panel satu dengan yang lainnya secara warna lebih mirip, dikarenakan warna dalam 1 lembar kulit stabil"}, {"item": "Natural/Black", "level": 2, "ket": "meng-cutting kulit pair warna Natural/Black itu kesulitan medium/sedang, karena antar part/panel satu dengan yang lainnya ada kemungkinan beda warna mesikipun tidak jauh dan harus sama dengan pola pasangannya karena pair"}, {"item": "Warna", "level": 3, "ket": "meng-cutting kulit pair warna itu kesulitannya tinggi, karena 1 lembar kulit ada kemungkinan shading warna, sehingga peluang antara part/panel satu dengan lainyya akan berbeda warnanya dan mempengaruhi hasil akhir dan harus sama dengan pola pasangannya karena pair"}]};
-const KARAKTER = {"Softness": [{"code": "S1", "level": 3, "ket": "S1 artinya hasil cutting harus memiliki softness yang baik. softness juga bisa diartikan stretch kulit yang baik, jadi operator harus memastikan bahwa kulit yang akan di cutting memiliki stretch atau softness yang baik"}, {"code": "S2", "level": 2, "ket": "S2 artinya hasil cutting harus memiliki softness yang normal saja. dan rata-rata kulit lembaran itu ada pada kondisi S2 sehingga operator lebih mudah menganalisanya"}, {"code": "S3", "level": 1, "ket": "S3 artinya hasil cutting harus memiliki tingkat softness yang kurang soft, dan untuk tingkat softess rendah biasanya cara cutting lebih mudah"}, {"code": "Softness Belum Paham", "level": 0, "ket": "Operator belum paham mengenai S1 S2 dan S3"}], "Thickness": [{"code": "Terlalu Tipis/Tebal", "level": 1, "ket": "Operator mudah menganalisa lembar kulit yang \"Terlalu\" Tipis/Tebal, karena biasanya yang \"Terlalu\" itu lebih dari range yang ditentukan, baik itu lebih besar atau lebih kecil"}, {"code": "Tebal", "level": 2, "ket": "Operator sulit membedakan Kulit yang \"Tebal\". \"Tebal\" itu dalam artian masih didalam range, tapi untuk size tertentu tidak boleh. Biasanya Range Ketebalan itu 0mm - 0.1mm, (misal ketebalan standard nya 0.45mm - 0.55mm). dibawah Range 0 - 0.05mm itu biasanya untuk size Ledies-S (misal 0.45 mm - 0.5 mm), dan untuk diatas 0.05 - 0.1 itu untuk Size Regular Kecil dan Sedang (misal 0.5 mm - 0.55 mm), namuan untuk range 0.1 - 0.2 untuk size Besar itu masih boelh (0.55 - 0.65)"}, {"code": "Normal", "level": 3, "ket": "Ketebalan Normal adalah ketebalan yang tepat di tengah range, misal 0.45 mm - 0.55 mm. artinya ketebalan normal itu ada diangka 0.5 tanpa range. dan operator tidak bisa mengetahui kulit yang benar-benar normal ketebalannya"}, {"code": "Tipis", "level": 2, "ket": "Operator sulit membedakan Kulit yang \"Tipis\". \"Tipis\" itu dalam artian masih didalam range, tapi untuk size tertentu tidak boleh. Biasanya Range Ketebalan itu 0mm - 0.1mm, (misal ketebalan standard nya 0.45mm - 0.55mm). dibawah Range 0 - 0.05mm itu biasanya untuk size Ledies-S (misal 0.45 mm - 0.5 mm), dan untuk diatas 0.05 - 0.1 itu untuk Size Regular Kecil dan Sedang (misal 0.5 mm - 0.55 mm), namuan untuk range 0.1 - 0.2 untuk size Besar itu masih boelh (0.55 - 0.65)"}, {"code": "Thickness Belum Paham", "level": 0, "ket": "Operator tidak bisa membedakan mana kulit terlalu tebal/tipis, dengan kulit tebal/tipis, apalagi kulit normal"}], "Grade": [{"code": "A", "level": 7, "ket": "Grade dimana glove biasanya Range Ketebalannya kecil, dan untuk nilai softness nya tinggi, serta range nilai softnes nya rendah, jadi nilai softnes S1 - S3 hanya maximal selisih 3"}, {"code": "AB", "level": 6, "ket": "Grade dimana glove biasanya Range Ketebalannya kecil, dan untuk nilai softness nya Lebih kecil 3 Softness dari Grade A, serta range nilai softnes nya rendah, jadi nilai softnes S1 - S3 hanya maximal selisih 3"}, {"code": "BC", "level": 5, "ket": "Grade dimana glove biasanya Range Ketebalannya kecil, dan untuk nilai softness nya Lebih kecil 3 Softness dari Grade AB, serta range nilai softnes nya rendah, jadi nilai softnes S1 - S3 hanya maximal selisih 3"}, {"code": "CD", "level": 4, "ket": "Grade dimana glove biasanya Range Ketebalannya kecil, dan untuk nilai softness nya Lebih kecil 3 Softness dari Grade BC, serta range nilai softnes nya rendah, jadi nilai softnes S1 - S3 hanya maximal selisih 3"}, {"code": "D", "level": 3, "ket": "Grade dimana glove biasanya Range Ketebalannya kecil, dan untuk nilai softness nya Lebih kecil 3 Softness dari Grade CD, serta range nilai softnes nya rendah, jadi nilai softnes S1 - S3 hanya maximal selisih 3"}, {"code": "E", "level": 2, "ket": "Grade dimana glove biasanya Range Ketebalannya kecil, dan untuk nilai softness nya Lebih kecil 3 Softness dari Grade D, serta range nilai softnes nya rendah, jadi nilai softnes S1 - S3 hanya maximal selisih 3"}, {"code": "R", "level": 1, "ket": "Grade dimana glove biasanya Range Ketebalannya kecil, dan untuk nilai softness nya Lebih kecil 3 Softness dari Grade E, serta range nilai softnes nya rendah, jadi nilai softnes S1 - S3 hanya maximal selisih 3"}, {"code": "Grade Belum Paham", "level": 0, "ket": "Operator belum pagam grade"}], "Size": [{"code": "Ledies - S", "level": 4, "ket": "Size terkecil, biasanya harus memiliki softness yang baik di gradenya, dan toleransi ketebalan yang kecil. karena jika ketebalannya ada di batas atas ketebalan, akan tidak enak dipakai"}, {"code": "Regular Kecil M-ML", "level": 2, "ket": "Kelompok Size kedua terkecil, ini lebih mudah dari size Ledies-S karena softness dan toleransi ketebalannya lebih besar dari Ledies-S"}, {"code": "Regular Sedang L", "level": 1, "ket": "Kelompok Size ini relatif mudah, karena ke umum-an kulit berada di karaketer size ini"}, {"code": "Regular Besar (> XL)", "level": 3, "ket": "Size Reguler besar, itu lebih mudah dari segi softness dan ketebalan, tapi tingkat kesulitan biasanya di kecukupan, ketika size nya besar, tapi bentuk lembar kulit kecil itu bisa mengakibatkan boros"}, {"code": "Size Belum Paham", "level": 0, "ket": null}]};
-const OPERATORS = [{"nama": "AHMAD", "absen": "D.00001", "Texture": 4, "Consumption": 1, "Metode": 4, "Serat Kulit": 3, "Pcs Warna": 3, "Pair Warna": 3, "size": "Regular Kecil M-ML", "grade": "Grade Belum Paham", "softness": "S1", "thickness": "Tebal"}, {"nama": "LUKMAN", "absen": "D.00002", "Texture": 4, "Consumption": 1, "Metode": 3, "Serat Kulit": 3, "Pcs Warna": 3, "Pair Warna": 1, "size": "Size Belum Paham", "grade": "R", "softness": "Softness Belum Paham", "thickness": "Normal"}, {"nama": "FIRDAUS", "absen": "D.00003", "Texture": 4, "Consumption": 3, "Metode": 2, "Serat Kulit": 2, "Pcs Warna": 2, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "E", "softness": "S3", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "WISHAL", "absen": "D.00004", "Texture": 3, "Consumption": 3, "Metode": 3, "Serat Kulit": 3, "Pcs Warna": 2, "Pair Warna": 1, "size": "Regular Sedang L", "grade": "D", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "DAFFA", "absen": "D.00005", "Texture": 3, "Consumption": 3, "Metode": 1, "Serat Kulit": 2, "Pcs Warna": 1, "Pair Warna": 1, "size": "Regular Besar (> XL)", "grade": "Grade Belum Paham", "softness": "S3", "thickness": "Normal"}, {"nama": "NUGRAHA", "absen": "D.00006", "Texture": 4, "Consumption": 1, "Metode": 4, "Serat Kulit": 2, "Pcs Warna": 3, "Pair Warna": 3, "size": "Regular Kecil M-ML", "grade": "CD", "softness": "S1", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "ZALINAR", "absen": "D.00007", "Texture": 3, "Consumption": 3, "Metode": 1, "Serat Kulit": 3, "Pcs Warna": 1, "Pair Warna": 3, "size": "Regular Besar (> XL)", "grade": "Grade Belum Paham", "softness": "S1", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "MUKHFINA", "absen": "D.00008", "Texture": 4, "Consumption": 3, "Metode": 2, "Serat Kulit": 2, "Pcs Warna": 3, "Pair Warna": 2, "size": "Size Belum Paham", "grade": "E", "softness": "S3", "thickness": "Normal"}, {"nama": "HILMA", "absen": "D.00009", "Texture": 2, "Consumption": 2, "Metode": 3, "Serat Kulit": 1, "Pcs Warna": 3, "Pair Warna": 1, "size": "Ledies - S", "grade": "Grade Belum Paham", "softness": "S1", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "SALSA", "absen": "D.00010", "Texture": 3, "Consumption": 2, "Metode": 5, "Serat Kulit": 1, "Pcs Warna": 3, "Pair Warna": 2, "size": "Size Belum Paham", "grade": "E", "softness": "Softness Belum Paham", "thickness": "Thickness Belum Paham"}, {"nama": "BILA", "absen": "D.00011", "Texture": 4, "Consumption": 2, "Metode": 4, "Serat Kulit": 3, "Pcs Warna": 3, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "AB", "softness": "Softness Belum Paham", "thickness": "Thickness Belum Paham"}, {"nama": "LILIS", "absen": "D.00012", "Texture": 3, "Consumption": 3, "Metode": 5, "Serat Kulit": 2, "Pcs Warna": 3, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "BC", "softness": "S1", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "KARTIWI", "absen": "D.00013", "Texture": 1, "Consumption": 1, "Metode": 5, "Serat Kulit": 2, "Pcs Warna": 1, "Pair Warna": 3, "size": "Ledies - S", "grade": "E", "softness": "S2", "thickness": "Thickness Belum Paham"}, {"nama": "FAJAR", "absen": "D.00014", "Texture": 1, "Consumption": 2, "Metode": 2, "Serat Kulit": 2, "Pcs Warna": 2, "Pair Warna": 1, "size": "Regular Besar (> XL)", "grade": "CD", "softness": "Softness Belum Paham", "thickness": "Normal"}, {"nama": "AGUNG", "absen": "D.00015", "Texture": 3, "Consumption": 3, "Metode": 1, "Serat Kulit": 1, "Pcs Warna": 3, "Pair Warna": 2, "size": "Regular Sedang L", "grade": "R", "softness": "S2", "thickness": "Tebal"}, {"nama": "TRI", "absen": "D.00016", "Texture": 2, "Consumption": 2, "Metode": 2, "Serat Kulit": 2, "Pcs Warna": 2, "Pair Warna": 2, "size": "Size Belum Paham", "grade": "D", "softness": "S1", "thickness": "Normal"}, {"nama": "LAKSONO", "absen": "D.00017", "Texture": 4, "Consumption": 2, "Metode": 3, "Serat Kulit": 2, "Pcs Warna": 1, "Pair Warna": 1, "size": "Ledies - S", "grade": "R", "softness": "S3", "thickness": "Normal"}, {"nama": "AFIF", "absen": "D.00018", "Texture": 2, "Consumption": 3, "Metode": 1, "Serat Kulit": 1, "Pcs Warna": 1, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "R", "softness": "S1", "thickness": "Thickness Belum Paham"}, {"nama": "YUNALDI", "absen": "D.00019", "Texture": 2, "Consumption": 3, "Metode": 3, "Serat Kulit": 2, "Pcs Warna": 2, "Pair Warna": 1, "size": "Regular Besar (> XL)", "grade": "CD", "softness": "S3", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "REZA", "absen": "D.00020", "Texture": 4, "Consumption": 3, "Metode": 5, "Serat Kulit": 1, "Pcs Warna": 1, "Pair Warna": 3, "size": "Ledies - S", "grade": "Grade Belum Paham", "softness": "S1", "thickness": "Thickness Belum Paham"}, {"nama": "DAMARA", "absen": "D.00021", "Texture": 3, "Consumption": 3, "Metode": 5, "Serat Kulit": 2, "Pcs Warna": 3, "Pair Warna": 3, "size": "Size Belum Paham", "grade": "CD", "softness": "S2", "thickness": "Thickness Belum Paham"}, {"nama": "AJI", "absen": "D.00022", "Texture": 3, "Consumption": 3, "Metode": 5, "Serat Kulit": 1, "Pcs Warna": 3, "Pair Warna": 3, "size": "Regular Besar (> XL)", "grade": "E", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "SAEFUL", "absen": "D.00023", "Texture": 1, "Consumption": 2, "Metode": 1, "Serat Kulit": 1, "Pcs Warna": 2, "Pair Warna": 2, "size": "Regular Besar (> XL)", "grade": "AB", "softness": "S3", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "GHINA", "absen": "D.00024", "Texture": 4, "Consumption": 2, "Metode": 2, "Serat Kulit": 1, "Pcs Warna": 3, "Pair Warna": 2, "size": "Regular Kecil M-ML", "grade": "E", "softness": "S3", "thickness": "Normal"}, {"nama": "NOVITA", "absen": "D.00025", "Texture": 4, "Consumption": 1, "Metode": 4, "Serat Kulit": 3, "Pcs Warna": 3, "Pair Warna": 2, "size": "Regular Besar (> XL)", "grade": "AB", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "LIES", "absen": "D.00026", "Texture": 3, "Consumption": 1, "Metode": 3, "Serat Kulit": 1, "Pcs Warna": 3, "Pair Warna": 3, "size": "Regular Besar (> XL)", "grade": "Grade Belum Paham", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "DIANA", "absen": "D.00027", "Texture": 1, "Consumption": 2, "Metode": 3, "Serat Kulit": 1, "Pcs Warna": 3, "Pair Warna": 3, "size": "Regular Sedang L", "grade": "BC", "softness": "Softness Belum Paham", "thickness": "Thickness Belum Paham"}, {"nama": "ANZIS", "absen": "D.00028", "Texture": 2, "Consumption": 3, "Metode": 3, "Serat Kulit": 2, "Pcs Warna": 1, "Pair Warna": 2, "size": "Regular Sedang L", "grade": "D", "softness": "S3", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "PRATAMA", "absen": "D.00029", "Texture": 1, "Consumption": 1, "Metode": 2, "Serat Kulit": 3, "Pcs Warna": 1, "Pair Warna": 2, "size": "Regular Kecil M-ML", "grade": "A", "softness": "S1", "thickness": "Thickness Belum Paham"}, {"nama": "DITYA", "absen": "D.00030", "Texture": 2, "Consumption": 1, "Metode": 3, "Serat Kulit": 1, "Pcs Warna": 2, "Pair Warna": 2, "size": "Regular Besar (> XL)", "grade": "E", "softness": "S3", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "MAHARYALDI", "absen": "D.00031", "Texture": 4, "Consumption": 3, "Metode": 2, "Serat Kulit": 2, "Pcs Warna": 1, "Pair Warna": 2, "size": "Ledies - S", "grade": "Grade Belum Paham", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "ALFI", "absen": "D.00032", "Texture": 4, "Consumption": 1, "Metode": 3, "Serat Kulit": 1, "Pcs Warna": 2, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "Grade Belum Paham", "softness": "S2", "thickness": "Thickness Belum Paham"}, {"nama": "ROY", "absen": "D.00033", "Texture": 3, "Consumption": 3, "Metode": 3, "Serat Kulit": 3, "Pcs Warna": 2, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "D", "softness": "S1", "thickness": "Normal"}, {"nama": "SURYO", "absen": "D.00034", "Texture": 4, "Consumption": 2, "Metode": 1, "Serat Kulit": 2, "Pcs Warna": 3, "Pair Warna": 2, "size": "Regular Kecil M-ML", "grade": "D", "softness": "S1", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "AQILA", "absen": "D.00035", "Texture": 1, "Consumption": 1, "Metode": 4, "Serat Kulit": 3, "Pcs Warna": 3, "Pair Warna": 2, "size": "Regular Sedang L", "grade": "D", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "IKA", "absen": "D.00036", "Texture": 1, "Consumption": 1, "Metode": 2, "Serat Kulit": 2, "Pcs Warna": 2, "Pair Warna": 2, "size": "Regular Besar (> XL)", "grade": "BC", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "HANISA", "absen": "D.00037", "Texture": 3, "Consumption": 3, "Metode": 3, "Serat Kulit": 1, "Pcs Warna": 1, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "Grade Belum Paham", "softness": "S1", "thickness": "Thickness Belum Paham"}, {"nama": "ELA", "absen": "D.00038", "Texture": 2, "Consumption": 2, "Metode": 2, "Serat Kulit": 2, "Pcs Warna": 3, "Pair Warna": 3, "size": "Regular Kecil M-ML", "grade": "CD", "softness": "Softness Belum Paham", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "SITI", "absen": "D.00039", "Texture": 1, "Consumption": 2, "Metode": 3, "Serat Kulit": 1, "Pcs Warna": 1, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "D", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "FOREMAN", "absen": "D.00040", "Texture": 3, "Consumption": 2, "Metode": 5, "Serat Kulit": 2, "Pcs Warna": 1, "Pair Warna": 2, "size": "Regular Kecil M-ML", "grade": "D", "softness": "S1", "thickness": "Normal"}];
+let NON_KARAKTER = {};
+let KARAKTER = {};
+let OPERATORS = [];
+let lastSyncTime = null;
+let dataReady = false;
+
+const SHEET_ID = '1kpXZSRkwIUl1Qhljr1P3FlXyfuv16ARf2mmI8JT5dhw';
+const SHEET_NAMES = {
+  nonKarakter: 'Kode Non Karakter',
+  karakter: 'Penjelasan mengenai karakter kulit',
+  operator: 'Skill Matrix Operator'
+};
+function gvizUrl(sheetName){
+  return 'https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(sheetName);
+}
+async function fetchSheetRows(sheetName){
+  const res = await fetch(gvizUrl(sheetName));
+  if (!res.ok) throw new Error('Gagal mengambil sheet "'+sheetName+'" (HTTP '+res.status+')');
+  const text = await res.text();
+  const parsed = Papa.parse(text, { skipEmptyLines: true });
+  return parsed.data;
+}
+function buildNonKarakter(rows){
+  const result = {};
+  for (let i = 1; i < rows.length; i++){
+    const [point, levelKar, item, level, ket] = rows[i];
+    if (!point || !item) continue;
+    if (!result[point]) result[point] = [];
+    result[point].push({ item, level: parseInt(level) || 0, ket: ket || '' });
+  }
+  return result;
+}
+function buildKarakter(rows){
+  const cols = ['Softness','Thickness','Grade','Size'];
+  const result = { Softness: [], Thickness: [], Grade: [], Size: [] };
+  const seen = { Softness: new Set(), Thickness: new Set(), Grade: new Set(), Size: new Set() };
+  for (let i = 1; i < rows.length; i++){
+    const row = rows[i];
+    const groups = [[row[0],row[1],row[2]], [row[3],row[4],row[5]], [row[6],row[7],row[8]], [row[9],row[10],row[11]]];
+    cols.forEach((c, idx) => {
+      const [code, lvl, ket] = groups[idx];
+      if (code === undefined || code === '' || lvl === undefined || lvl === '') return;
+      if (seen[c].has(code)) return;
+      seen[c].add(code);
+      result[c].push({ code, level: parseInt(lvl) || 0, ket: ket || '' });
+    });
+  }
+  return result;
+}
+function buildOperators(rows){
+  const result = [];
+  for (let i = 1; i < rows.length; i++){
+    const row = rows[i];
+    const nama = row[0];
+    if (!nama) continue;
+    result.push({
+      nama, absen: row[1],
+      Texture: parseInt(row[3]) || 0, Consumption: parseInt(row[4]) || 0, Metode: parseInt(row[5]) || 0,
+      'Serat Kulit': parseInt(row[6]) || 0, 'Pcs Warna': parseInt(row[7]) || 0, 'Pair Warna': parseInt(row[8]) || 0,
+      size: row[9], grade: row[10], softness: row[11], thickness: row[12]
+    });
+  }
+  return result;
+}
+async function loadAllData(){
+  const [nonKarRows, karRows, opRows] = await Promise.all([
+    fetchSheetRows(SHEET_NAMES.nonKarakter),
+    fetchSheetRows(SHEET_NAMES.karakter),
+    fetchSheetRows(SHEET_NAMES.operator)
+  ]);
+  NON_KARAKTER = buildNonKarakter(nonKarRows);
+  KARAKTER = buildKarakter(karRows);
+  OPERATORS = buildOperators(opRows);
+  lastSyncTime = new Date();
+}
+function updateLiveBadge(ok){
+  const dot = document.getElementById('liveDot');
+  const txt = document.getElementById('liveBadgeText');
+  const footerInfo = document.getElementById('footerInfo');
+  if (ok){
+    dot.style.background = 'var(--green)';
+    txt.textContent = OPERATORS.length+' Operator \u00b7 Sinkron '+lastSyncTime.toLocaleTimeString('id-ID');
+    if (footerInfo) footerInfo.textContent = OPERATORS.length+' operator \u00b7 data live dari Google Sheets \u00b7 terakhir sinkron '+lastSyncTime.toLocaleTimeString('id-ID');
+  } else {
+    dot.style.background = 'var(--red)';
+    txt.textContent = 'Gagal sinkron ke Google Sheets';
+  }
+}
 
 const CATS_NONKARAKTER = ['Texture','Consumption','Metode','Serat Kulit','Pcs Warna','Pair Warna'];
 const CATS_KARAKTER_DROPDOWN = ['Grade','Size'];
@@ -291,6 +377,10 @@ document.getElementById('sidebar').addEventListener('click', (e) => {
   renderTab();
 });
 function renderTab(){
+  if (!dataReady){
+    document.getElementById('mainContent').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-3);font-size:12px">Masih memuat data dari Google Sheets, mohon tunggu sebentar...</div>';
+    return;
+  }
   if (currentTab === 'cek') renderCekKelayakan();
   else if (currentTab === 'rekomendasi') renderRekomendasi();
   else if (currentTab === 'data') renderDataOperator();
@@ -306,10 +396,10 @@ let gapLog = [];           // riwayat order yang gagal total (tidak ada operator
 // ══════════════════════════════════════════════════════════
 const GENERIC_DROPDOWN_CATS = CATS_NONKARAKTER.filter(c => c !== 'Texture');
 const STATUS_META = {
-  optimal:  { label: 'Optimal',        rank: 0, rowClass: 'row-optimal',  dot: '🟢' },
-  layak:    { label: 'Layak',          rank: 1, rowClass: 'row-layak',    dot: '🔵' },
-  pantauan: { label: 'Perlu Pantauan', rank: 2, rowClass: 'row-pantauan', dot: '🟡' },
-  tidak:    { label: 'Tidak Layak',    rank: 3, rowClass: 'row-tidak',    dot: '🔴' }
+  optimal:    { label: 'Optimal',         rank: 0, rowClass: 'row-optimal',  dot: '🟢' },
+  overskill:  { label: 'Overskill',       rank: 1, rowClass: 'row-layak',    dot: '🔵' },
+  berpotensi: { label: 'Berpotensi Bisa', rank: 2, rowClass: 'row-pantauan', dot: '🟡' },
+  tidak:      { label: 'Tidak Layak',     rank: 3, rowClass: 'row-tidak',    dot: '🔴' }
 };
 
 function renderCekKelayakan(){
@@ -456,10 +546,9 @@ function runMatch(){
     const layak = perCat.every(p => p.ok);
     const score = perCat.reduce((s,p) => s + p.opLvl, 0);
     const totalGap = perCat.reduce((s,p) => s + p.gap, 0);
-    const mepet = perCat.some(p => p.ok && p.buffer === 0);
     const narratives = {};
     ALL_CATS.forEach(cat => { narratives[cat] = narrativeFor(cat, op, reqInfo[cat]); });
-    return { op, perCat, layak, score, totalGap, mepet, narratives };
+    return { op, perCat, layak, score, totalGap, narratives };
   });
 
   const layakList = results.filter(r => r.layak);
@@ -470,9 +559,9 @@ function runMatch(){
   }
   results.forEach(r => {
     if (r.layak){
-      r.status = optimalSet.has(r) ? 'optimal' : (r.mepet ? 'pantauan' : 'layak');
+      r.status = optimalSet.has(r) ? 'optimal' : 'overskill';
     } else {
-      r.status = r.totalGap <= 2 ? 'pantauan' : 'tidak';
+      r.status = r.totalGap <= 2 ? 'berpotensi' : 'tidak';
     }
   });
 
@@ -487,21 +576,23 @@ function runMatch(){
   results.sort((a,b) => STATUS_META[a.status].rank - STATUS_META[b.status].rank || a.totalGap - b.totalGap || b.score - a.score);
 
   lastMatch = { reqInfo, relevantCats, results, gapRecommend };
-  aiStatusMessage = 'Menyiapkan narasi...';
+  groupAiState = { optimal: 'idle', overskill: 'idle', berpotensi: 'idle', tidak: 'idle' };
   renderMatchResult();
-  fetchAiNarratives();
 }
 
-let aiStatusMessage = 'Menyiapkan narasi...';
+let groupAiState = { optimal: 'idle', overskill: 'idle', berpotensi: 'idle', tidak: 'idle' }; // idle | loading | done | error
 
-// ─── AI NARRATIVE ENHANCEMENT (Vercel + Claude API) ─────────
-// Perhitungan level/status TETAP rule-based (di atas). Ini hanya
-// memperhalus kalimat narasi lewat /api/narrate. Kalau API belum
-// dikonfigurasi / gagal, tabel tetap tampil dengan narasi rule-based.
-function fetchAiNarratives(){
+// ─── AI NARRATIVE ON-DEMAND (Vercel + Claude API), per grup status ──
+// Perhitungan level/status TETAP rule-based (di atas). Tombol ini hanya
+// memperhalus kalimat narasi untuk grup yang dipilih saja — supaya hemat
+// token (tidak generate 40 operator sekaligus tiap kali cek order).
+function generateGroupNarrative(status){
   const { relevantCats, results } = lastMatch;
+  const group = results.filter(r => r.status === status);
+  if (!group.length) return;
+
   const facts = [];
-  results.forEach(r => {
+  group.forEach(r => {
     relevantCats.forEach(cat => {
       const p = r.perCat.find(x => x.cat === cat);
       const entry = { absen: r.op.absen, nama: r.op.nama, cat, opLvl: p.opLvl, reqLvl: p.reqLvl, ok: p.ok, gap: p.gap };
@@ -510,9 +601,8 @@ function fetchAiNarratives(){
     });
   });
 
-  aiStatusMessage = '✨ Menghasilkan narasi dengan AI...';
-  const statusEl = document.getElementById('aiStatus');
-  if (statusEl) statusEl.textContent = aiStatusMessage;
+  groupAiState[status] = 'loading';
+  renderMatchResult();
 
   fetch('/api/narrate', {
     method: 'POST',
@@ -521,33 +611,33 @@ function fetchAiNarratives(){
   })
   .then(r => r.json())
   .then(data => {
-    if (data.error){ aiStatusMessage = 'Narasi berbasis logic (AI belum aktif: '+data.error+')'; renderMatchResult(); return; }
-    results.forEach(r => {
+    if (data.error){ groupAiState[status] = 'error:'+data.error; renderMatchResult(); return; }
+    group.forEach(r => {
       const aiForOp = data.narratives[r.op.absen];
       if (aiForOp) relevantCats.forEach(cat => { if (aiForOp[cat]) r.narratives[cat] = aiForOp[cat]; });
     });
-    aiStatusMessage = '✨ Narasi dibuat otomatis oleh AI (Claude)';
+    groupAiState[status] = 'done';
     renderMatchResult();
   })
-  .catch(err => { aiStatusMessage = 'Narasi berbasis logic (AI tidak terjangkau)'; renderMatchResult(); });
+  .catch(() => { groupAiState[status] = 'error:AI tidak terjangkau'; renderMatchResult(); });
 }
 
 function renderMatchResult(){
   const { relevantCats, results, gapRecommend } = lastMatch;
-  const counts = { optimal:0, layak:0, pantauan:0, tidak:0 };
+  const counts = { optimal:0, overskill:0, berpotensi:0, tidak:0 };
   results.forEach(r => counts[r.status]++);
 
   const summaryHtml = `
     <div class="stat-row">
       <div class="stat-chip"><div class="stat-chip-label">KATEGORI DINILAI</div><div class="stat-chip-value">${relevantCats.length}</div></div>
       <div class="stat-chip"><div class="stat-chip-label">🟢 OPTIMAL</div><div class="stat-chip-value">${counts.optimal}</div></div>
-      <div class="stat-chip"><div class="stat-chip-label">🔵 LAYAK</div><div class="stat-chip-value">${counts.layak}</div></div>
-      <div class="stat-chip"><div class="stat-chip-label">🟡 PERLU PANTAUAN</div><div class="stat-chip-value">${counts.pantauan}</div></div>
+      <div class="stat-chip"><div class="stat-chip-label">🔵 OVERSKILL</div><div class="stat-chip-value">${counts.overskill}</div></div>
+      <div class="stat-chip"><div class="stat-chip-label">🟡 BERPOTENSI BISA</div><div class="stat-chip-value">${counts.berpotensi}</div></div>
       <div class="stat-chip"><div class="stat-chip-label">🔴 TIDAK LAYAK</div><div class="stat-chip-value">${counts.tidak}</div></div>
     </div>
   `;
 
-  const gapHtml = (counts.optimal===0 && counts.layak===0 && !results.some(r=>r.status==='pantauan' && r.layak)) ? `
+  const gapHtml = (counts.optimal===0 && counts.overskill===0) ? `
     <div class="gap-alert">
       <div class="gap-alert-title">Tidak ada operator yang layak untuk order ini</div>
       <div class="gap-alert-body">
@@ -557,6 +647,23 @@ function renderMatchResult(){
       </div>
     </div>
   ` : '';
+
+  const generateButtonsHtml = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      ${['optimal','overskill','berpotensi','tidak'].map(st => {
+        const meta = STATUS_META[st];
+        const state = groupAiState[st];
+        const n = counts[st];
+        let label, disabled = n===0;
+        if (state === 'loading'){ label = '⏳ Membuat narasi '+meta.label+'...'; disabled = true; }
+        else if (state === 'done'){ label = '✅ Narasi AI '+meta.label+' selesai'; }
+        else if (state && state.startsWith('error')){ label = '⚠️ Gagal ('+meta.label+') — coba lagi'; }
+        else { label = '✨ Generate Narasi AI — '+meta.label+' ('+n+')'; }
+        return '<button class="btn btn-ghost" '+(disabled?'disabled':'')+' onclick="generateGroupNarrative(\''+st+'\')">'+label+'</button>';
+      }).join('')}
+    </div>
+    <p class="section-desc" style="margin-top:-4px">Narasi default berbasis logic (gratis, instan). Klik tombol per grup untuk memperhalus kalimat pakai AI — supaya hemat token, cuma generate grup yang dipilih, bukan 40 operator sekaligus.</p>
+  `;
 
   const rows = results.map(r => {
     const meta = STATUS_META[r.status];
@@ -576,7 +683,7 @@ function renderMatchResult(){
 
   document.getElementById('matchResult').innerHTML = `
     ${summaryHtml}
-    <div id="aiStatus" style="font-size:10.5px;color:var(--text-3);margin-bottom:8px">${aiStatusMessage}</div>
+    ${generateButtonsHtml}
     ${gapHtml}
     <div class="op-table-wrap" style="margin-top:14px;max-height:640px">
       <table class="op-table report-table">
@@ -594,6 +701,32 @@ function renderMatchResult(){
 // ══════════════════════════════════════════════════════════
 // TAB 2 — REKOMENDASI NAIK SKILL
 // ══════════════════════════════════════════════════════════
+let lastRekomendasiData = null;
+let naikSkillAiState = 'idle'; // idle | loading | done
+let naikSkillAiSummary = '';
+
+function generateNaikSkillSummary(){
+  if (!lastRekomendasiData) return;
+  naikSkillAiState = 'loading';
+  renderRekomendasi();
+  fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      question: 'Buatkan ringkasan singkat kondisi skill tim saat ini dan rekomendasi prioritas training, berdasarkan data 3 kriteria (belum paham, di bawah rata-rata, gap order) berikut.',
+      context: lastRekomendasiData
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error){ naikSkillAiState = 'idle'; renderRekomendasi(); return; }
+    naikSkillAiSummary = data.result;
+    naikSkillAiState = 'done';
+    renderRekomendasi();
+  })
+  .catch(() => { naikSkillAiState = 'idle'; renderRekomendasi(); });
+}
+
 function renderRekomendasi(){
   // 1. Belum Paham (level 0 di kategori manapun)
   const belumPaham = [];
@@ -651,9 +784,21 @@ function renderRekomendasi(){
     + '</div>'
   ).join('') : '<div class="empty-note">Belum ada order yang gagal total (semua order yang dicek di tab "Cek Kelayakan" sejauh ini masih punya minimal 1 operator layak)</div>';
 
+  lastRekomendasiData = {
+    belumPaham: Object.fromEntries(Object.entries(belumPahamGrouped).map(([cat,items]) => [cat, items.map(x=>x.nama)])),
+    dibawahRata: Object.fromEntries(Object.entries(dibawahRataGrouped).map(([cat,items]) => [cat, { rataRata: avgByCat[cat].toFixed(2), operator: items.map(x=>({nama:x.nama, level:x.lvl})) }])),
+    gapOrderTerakhir: gapLog.slice(-5)
+  };
+
   document.getElementById('mainContent').innerHTML = `
     <h2 class="section-title">Rekomendasi Kenaikan Skill</h2>
     <p class="section-desc">Tiga kriteria prioritas kenaikan skill. Operator yang masuk lebih dari 1 kriteria ditandai <span class="badge-priority" style="margin-left:0">Prioritas Tinggi</span>.</p>
+    <div style="margin-bottom:14px">
+      <button class="btn btn-ghost" id="naikSkillAiBtn" onclick="generateNaikSkillSummary()" ${naikSkillAiState==='loading'?'disabled':''}>
+        ${naikSkillAiState==='loading' ? '⏳ Membuat ringkasan AI...' : (naikSkillAiState==='done' ? '✅ Ringkasan AI selesai (klik untuk generate ulang)' : '✨ Generate Ringkasan &amp; Rekomendasi AI')}
+      </button>
+      <div id="naikSkillAiPanel">${naikSkillAiSummary ? '<div class="explain-panel" style="margin-top:10px">'+naikSkillAiSummary+'</div>' : ''}</div>
+    </div>
     <div class="rec-grid">
       <div class="rec-card">
         <div class="rec-card-title">1. Belum Paham</div>
@@ -678,21 +823,21 @@ function renderRekomendasi(){
 // TAB 3 — DATA OPERATOR
 // ══════════════════════════════════════════════════════════
 function renderDataOperator(){
-  const rows = OPERATORS.map((op, idx) => `
+  const rows = OPERATORS.map((op) => `
     <tr>
       <td class="name-cell">${op.nama}</td>
       <td>${op.absen}</td>
-      ${CATS_NONKARAKTER.map(cat => `<td class="editable" ondblclick="editCell(this, ${idx}, '${cat}', 'number')">${op[cat]}</td>`).join('')}
-      <td class="editable" ondblclick="editCell(this, ${idx}, 'size', 'select', 'Size')">${op.size}</td>
-      <td class="editable" ondblclick="editCell(this, ${idx}, 'grade', 'select', 'Grade')">${op.grade}</td>
-      <td class="editable" ondblclick="editCell(this, ${idx}, 'softness', 'select', 'Softness')">${op.softness}</td>
-      <td class="editable" ondblclick="editCell(this, ${idx}, 'thickness', 'select', 'Thickness')">${op.thickness}</td>
+      ${CATS_NONKARAKTER.map(cat => `<td>${op[cat]}</td>`).join('')}
+      <td>${op.size}</td>
+      <td>${op.grade}</td>
+      <td>${op.softness}</td>
+      <td>${op.thickness}</td>
     </tr>
   `).join('');
 
   document.getElementById('mainContent').innerHTML = `
     <h2 class="section-title">Data Operator</h2>
-    <p class="section-desc">40 operator dengan 10 level skill. Klik dua kali (double-click) pada sel untuk mengedit — perubahan tersimpan untuk sesi ini (belum ke penyimpanan permanen, karena data masih ditanam langsung / hardcode).</p>
+    <p class="section-desc">${OPERATORS.length} operator dengan 10 level skill. Data ditarik langsung (read-only) dari Google Sheets "Skill Matrix Operator" &mdash; untuk mengubah level, edit langsung di Sheet aslinya, dashboard ini akan otomatis sinkron ulang tiap 1 jam (atau saat halaman dibuka ulang).</p>
     <div class="op-table-wrap">
       <table class="op-table">
         <thead><tr>
@@ -704,27 +849,6 @@ function renderDataOperator(){
       </table>
     </div>
   `;
-}
-
-function editCell(td, idx, field, type, refCat){
-  const oldVal = OPERATORS[idx][field];
-  let inputHtml;
-  if (type === 'number'){
-    inputHtml = '<input class="cell-edit" type="number" min="0" value="'+oldVal+'">';
-  } else {
-    const opts = KARAKTER[refCat].map(x => '<option value="'+x.code+'" '+(x.code===oldVal?'selected':'')+'>'+x.code+'</option>').join('');
-    inputHtml = '<select class="cell-edit">'+opts+'</select>';
-  }
-  td.innerHTML = inputHtml;
-  const input = td.querySelector('.cell-edit');
-  input.focus();
-  const commit = () => {
-    const val = type === 'number' ? parseInt(input.value)||0 : input.value;
-    OPERATORS[idx][field] = val;
-    renderDataOperator();
-  };
-  input.addEventListener('blur', commit);
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') commit(); });
 }
 
 // ══════════════════════════════════════════════════════════
@@ -843,7 +967,28 @@ function localAnswerChat(q){
 }
 
 // ─── INIT ───────────────────────────────────────────────────
-renderTab();
+async function init(){
+  document.getElementById('mainContent').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-3);font-size:12px">Memuat data dari Google Sheets...</div>';
+  try {
+    await loadAllData();
+    dataReady = true;
+    updateLiveBadge(true);
+    renderTab();
+  } catch (err) {
+    updateLiveBadge(false);
+    document.getElementById('mainContent').innerHTML = '<div class="gap-alert"><div class="gap-alert-title">Gagal memuat data dari Google Sheets</div><div class="gap-alert-body">'+err.message+'<br><br>Pastikan sharing sheet sudah diatur "Anyone with the link \u2013 Viewer", lalu <button class="btn btn-primary" style="margin-top:8px" onclick="init()">Coba Lagi</button></div></div>';
+  }
+}
+init();
+setInterval(async () => {
+  try {
+    await loadAllData();
+    updateLiveBadge(true);
+  } catch (err) {
+    updateLiveBadge(false);
+  }
+}, 60 * 60 * 1000);
+
 </script>
 </body>
 </html>

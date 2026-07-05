@@ -33,7 +33,7 @@ Kalau kategori ditandai relevant:false, balas persis: "Tidak relevan dengan orde
 
 Field 'ok' pada tiap kategori sudah pasti benar (dihitung sistem) — tugasmu hanya membuat kalimatnya enak dibaca, jangan ubah kesimpulan ok/gagalnya.
 
-Balas HANYA dalam format JSON valid, tanpa markdown/backtick, dengan struktur:
+Balas HANYA dalam format JSON valid — karakter pertama responsmu WAJIB "{" dan karakter terakhir WAJIB "}". Jangan tambahkan kalimat pembuka, penutup, atau markdown/backtick apapun. Struktur:
 {"<no_absen>": {"<nama_kategori>": "kalimat narasi", ...}, ...}`;
 
     const userPrompt = 'Data fakta (per operator, per kategori relevan):\n' + JSON.stringify(facts);
@@ -47,9 +47,12 @@ Balas HANYA dalam format JSON valid, tanpa markdown/backtick, dengan struktur:
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 8000,
+        max_tokens: 16000,
         system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }]
+        messages: [
+          { role: 'user', content: userPrompt },
+          { role: 'assistant', content: '{' }
+        ]
       })
     });
 
@@ -59,13 +62,22 @@ Balas HANYA dalam format JSON valid, tanpa markdown/backtick, dengan struktur:
     }
 
     const data = await response.json();
-    const text = data.content.map(c => c.text || '').join('');
+    let text = data.content.map(c => c.text || '').join('');
+    // Karena kita prefill '{', gabungkan kembali di depan sebelum parse
+    if (!text.trim().startsWith('{')) text = '{' + text;
+
     let parsed;
     try {
-      const clean = text.replace(/```json|```/g, '').trim();
-      parsed = JSON.parse(clean);
+      parsed = JSON.parse(text);
     } catch (e) {
-      return res.status(500).json({ error: 'Gagal parse hasil AI sebagai JSON.', raw: text.slice(0, 500) });
+      // fallback: ambil substring dari '{' pertama sampai '}' terakhir
+      try {
+        const start = text.indexOf('{');
+        const end = text.lastIndexOf('}');
+        parsed = JSON.parse(text.slice(start, end + 1));
+      } catch (e2) {
+        return res.status(500).json({ error: 'Gagal parse hasil AI sebagai JSON.', raw: text.slice(0, 500) });
+      }
     }
 
     return res.status(200).json({ narratives: parsed });
