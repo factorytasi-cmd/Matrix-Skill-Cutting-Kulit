@@ -196,7 +196,7 @@
   <div class="chat-log" id="chatLog">
     <div class="msg-bot">
       <div class="msg-bot-avatar">L</div>
-      <div class="msg-bot-bubble">Tanya kenapa suatu operator cocok/tidak cocok untuk order terakhir yang dicek, atau siapa yang paling perlu naik skill. Jawaban dihasilkan langsung dari data &amp; hasil perhitungan skill matrix (logic rule-based, bukan model AI eksternal), jadi selalu konsisten dengan angka di dashboard.</div>
+      <div class="msg-bot-bubble">Tanya kenapa suatu operator cocok/tidak cocok untuk order terakhir yang dicek, atau siapa yang paling perlu naik skill. Jawaban dibuat oleh AI (Claude) berdasarkan hasil perhitungan skill matrix yang tersimpan — perhitungan levelnya sendiri tetap logic pasti, AI hanya membantu menjelaskan.</div>
     </div>
   </div>
   <div class="chat-suggest-row" id="chatSuggestRow">
@@ -208,7 +208,7 @@
     <input type="text" class="chat-input" id="chatInput" placeholder="Tulis pertanyaan, misal: kenapa LUKMAN tidak lolos?" onkeydown="if(event.key==='Enter')sendChat()">
     <button class="chat-icon-btn send" onclick="sendChat()" title="Kirim" aria-label="Kirim">&#10148;</button>
   </div>
-  <div class="chat-hint">Asisten berbasis logic skill matrix — one-shot, tiap pertanyaan dijawab dari hasil pencocokan yang tersimpan di sesi ini.</div>
+  <div class="chat-hint">Ditenagai Claude API lewat backend Vercel — kalau API belum dikonfigurasi, otomatis pakai jawaban berbasis logic sebagai cadangan.</div>
 </div>
 
 <div class="app-body">
@@ -487,7 +487,49 @@ function runMatch(){
   results.sort((a,b) => STATUS_META[a.status].rank - STATUS_META[b.status].rank || a.totalGap - b.totalGap || b.score - a.score);
 
   lastMatch = { reqInfo, relevantCats, results, gapRecommend };
+  aiStatusMessage = 'Menyiapkan narasi...';
   renderMatchResult();
+  fetchAiNarratives();
+}
+
+let aiStatusMessage = 'Menyiapkan narasi...';
+
+// ─── AI NARRATIVE ENHANCEMENT (Vercel + Claude API) ─────────
+// Perhitungan level/status TETAP rule-based (di atas). Ini hanya
+// memperhalus kalimat narasi lewat /api/narrate. Kalau API belum
+// dikonfigurasi / gagal, tabel tetap tampil dengan narasi rule-based.
+function fetchAiNarratives(){
+  const { relevantCats, results } = lastMatch;
+  const facts = [];
+  results.forEach(r => {
+    relevantCats.forEach(cat => {
+      const p = r.perCat.find(x => x.cat === cat);
+      const entry = { absen: r.op.absen, nama: r.op.nama, cat, opLvl: p.opLvl, reqLvl: p.reqLvl, ok: p.ok, gap: p.gap };
+      if (cat === 'Texture') entry.gagalItems = lastMatch.reqInfo['Texture'].wajibItems.filter(it => it.level > p.opLvl).map(it => it.item+' (level '+it.level+')');
+      facts.push(entry);
+    });
+  });
+
+  aiStatusMessage = '✨ Menghasilkan narasi dengan AI...';
+  const statusEl = document.getElementById('aiStatus');
+  if (statusEl) statusEl.textContent = aiStatusMessage;
+
+  fetch('/api/narrate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ facts })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error){ aiStatusMessage = 'Narasi berbasis logic (AI belum aktif: '+data.error+')'; renderMatchResult(); return; }
+    results.forEach(r => {
+      const aiForOp = data.narratives[r.op.absen];
+      if (aiForOp) relevantCats.forEach(cat => { if (aiForOp[cat]) r.narratives[cat] = aiForOp[cat]; });
+    });
+    aiStatusMessage = '✨ Narasi dibuat otomatis oleh AI (Claude)';
+    renderMatchResult();
+  })
+  .catch(err => { aiStatusMessage = 'Narasi berbasis logic (AI tidak terjangkau)'; renderMatchResult(); });
 }
 
 function renderMatchResult(){
@@ -534,6 +576,7 @@ function renderMatchResult(){
 
   document.getElementById('matchResult').innerHTML = `
     ${summaryHtml}
+    <div id="aiStatus" style="font-size:10.5px;color:var(--text-3);margin-bottom:8px">${aiStatusMessage}</div>
     ${gapHtml}
     <div class="op-table-wrap" style="margin-top:14px;max-height:640px">
       <table class="op-table report-table">
@@ -728,15 +771,26 @@ function toggleChat(){
 function appendMsg(text, isUser){
   const log = document.getElementById('chatLog');
   const div = document.createElement('div');
-  if (isUser){ div.className = 'msg-user'; div.textContent = text; }
-  else { div.innerHTML = '<div class="msg-bot-avatar">L</div><div class="msg-bot-bubble"></div>'; div.className='msg-bot'; div.querySelector('.msg-bot-bubble').textContent = text; }
+  if (isUser){ div.className = 'msg-user'; div.textContent = text; log.appendChild(div); log.scrollTop = log.scrollHeight; return null; }
+  div.className = 'msg-bot';
+  div.innerHTML = '<div class="msg-bot-avatar">L</div><div class="msg-bot-bubble"></div>';
+  const bubble = div.querySelector('.msg-bot-bubble');
+  bubble.textContent = text;
   log.appendChild(div);
   log.scrollTop = log.scrollHeight;
+  return bubble;
 }
 function askSuggested(text){
   if (!chatOpen) toggleChat();
   document.getElementById('chatInput').value = text;
   sendChat();
+}
+function buildChatContext(){
+  if (!lastMatch) return null;
+  return {
+    relevantCats: lastMatch.relevantCats,
+    operators: lastMatch.results.map(r => ({ nama: r.op.nama, absen: r.op.absen, status: r.status, totalGap: r.totalGap, score: r.score }))
+  };
 }
 function sendChat(){
   const input = document.getElementById('chatInput');
@@ -744,9 +798,17 @@ function sendChat(){
   if (!q) return;
   appendMsg(q, true);
   input.value = '';
-  appendMsg(answerChat(q), false);
+  const bubble = appendMsg('Mengetik...', false);
+  fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question: q, context: buildChatContext() })
+  })
+  .then(r => r.json())
+  .then(data => { bubble.textContent = data.error ? localAnswerChat(q) : data.result; })
+  .catch(() => { bubble.textContent = localAnswerChat(q); });
 }
-function answerChat(q){
+function localAnswerChat(q){
   const ql = q.toLowerCase();
 
   if (!lastMatch){
