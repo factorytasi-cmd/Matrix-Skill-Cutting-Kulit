@@ -93,8 +93,9 @@
   .stat-chip-label{font-size:9px;color:var(--text-3);font-weight:500;letter-spacing:.03em;margin-bottom:2px}
   .stat-chip-value{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:500;color:var(--text)}
 
-  .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  @media (max-width:900px){.result-grid{grid-template-columns:1fr}}
+  .result-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  @media (max-width:1100px){.result-grid{grid-template-columns:1fr 1fr}}
+  @media (max-width:700px){.result-grid{grid-template-columns:1fr}}
   .result-col{border-radius:8px;padding:12px;min-height:120px}
   .result-col-title{font-size:12px;font-weight:600;margin-bottom:4px}
   .result-col-desc{font-size:10px;line-height:1.5;margin-bottom:10px}
@@ -113,6 +114,19 @@
   .col-layak .result-col-title{color:var(--blue)}
   .col-layak .result-col-desc{color:#8CA8C4}
   .col-layak .op-card{background:#0E1720;color:var(--blue-soft)}
+
+  .col-tidak{background:var(--red-bg);border:1px solid var(--red-border)}
+  .col-tidak .result-col-title{color:var(--red)}
+  .col-tidak .result-col-desc{color:#C4938E}
+  .col-tidak .op-card{background:#231514;color:var(--red-soft)}
+
+  /* REPORT TABLE ROW STATUS */
+  table.op-table tr.row-optimal td{background:var(--green-bg);color:var(--green-soft);border-top-color:var(--green-border)}
+  table.op-table tr.row-layak td{background:var(--blue-bg);color:var(--blue-soft);border-top-color:var(--blue-border)}
+  table.op-table tr.row-pantauan td{background:var(--yellow-bg);color:var(--yellow-soft);border-top-color:var(--yellow-border)}
+  table.op-table tr.row-tidak td{background:var(--red-bg);color:var(--red-soft);border-top-color:var(--red-border)}
+  table.op-table tr.row-optimal td.name-cell,table.op-table tr.row-layak td.name-cell,table.op-table tr.row-pantauan td.name-cell,table.op-table tr.row-tidak td.name-cell{color:inherit;filter:brightness(1.3)}
+  table.report-table td{white-space:normal;min-width:150px;line-height:1.5;vertical-align:top}
 
   .gap-alert{background:var(--orange-bg);border:1px solid var(--orange-border);border-radius:8px;padding:14px;margin-top:12px}
   .gap-alert-title{color:var(--orange);font-size:12px;font-weight:600;margin-bottom:6px}
@@ -290,11 +304,18 @@ let gapLog = [];           // riwayat order yang gagal total (tidak ada operator
 // ══════════════════════════════════════════════════════════
 // TAB 1 — CEK KELAYAKAN OPERATOR
 // ══════════════════════════════════════════════════════════
+const GENERIC_DROPDOWN_CATS = CATS_NONKARAKTER.filter(c => c !== 'Texture');
+const STATUS_META = {
+  optimal:  { label: 'Optimal',        rank: 0, rowClass: 'row-optimal',  dot: '🟢' },
+  layak:    { label: 'Layak',          rank: 1, rowClass: 'row-layak',    dot: '🔵' },
+  pantauan: { label: 'Perlu Pantauan', rank: 2, rowClass: 'row-pantauan', dot: '🟡' },
+  tidak:    { label: 'Tidak Layak',    rank: 3, rowClass: 'row-tidak',    dot: '🔴' }
+};
+
 function renderCekKelayakan(){
-  const dropdownFields = [...CATS_NONKARAKTER, ...CATS_KARAKTER_DROPDOWN];
-  const formHtml = dropdownFields.map(cat => {
+  const formHtml = GENERIC_DROPDOWN_CATS.concat(CATS_KARAKTER_DROPDOWN).map(cat => {
     let options;
-    if (CATS_NONKARAKTER.includes(cat)){
+    if (GENERIC_DROPDOWN_CATS.includes(cat)){
       options = NON_KARAKTER[cat].map(x => '<option value="'+x.item+'">'+x.item+' (level '+x.level+')</option>').join('');
     } else {
       options = KARAKTER[cat].filter(x => !x.code.includes('Belum Paham')).map(x => '<option value="'+x.code+'">'+x.code+' (level '+x.level+')</option>').join('');
@@ -314,11 +335,29 @@ function renderCekKelayakan(){
       + '</select></div>';
   }).join('');
 
+  const textureChecks = NON_KARAKTER['Texture'].map((x,idx) =>
+    '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--text-2)"><input type="checkbox" id="tex-chk-'+idx+'"> '+x.item+' (level '+x.level+')</label>'
+  ).join('');
+
+  const textureHtml = `
+    <div class="form-item" style="grid-column:1/-1">
+      <label class="form-label">Texture — Toleransi Visual</label>
+      <select class="form-select" id="ord-textureToleransi" onchange="document.getElementById('textureChecklistWrap').style.display = this.value==='ya' ? 'block' : 'none'">
+        <option value="tidak">Tidak ada toleransi — semua jenis cacat wajib dihindari</option>
+        <option value="ya">Ya, ada toleransi untuk beberapa jenis cacat</option>
+      </select>
+      <div id="textureChecklistWrap" style="display:none;margin-top:8px;padding:10px;background:var(--bg-1);border:1px solid var(--border-strong);border-radius:6px">
+        <div style="font-size:10px;color:var(--text-3);margin-bottom:6px">Centang jenis cacat yang DITOLERANSI (boleh muncul di hasil cutting — operator tidak wajib menguasainya). Yang TIDAK dicentang tetap wajib dikuasai operator.</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${textureChecks}</div>
+      </div>
+    </div>
+  `;
+
   document.getElementById('mainContent').innerHTML = `
     <h2 class="section-title">Cek Kelayakan Operator</h2>
-    <p class="section-desc">Masukkan karakteristik order (yang relevan saja — kategori yang di-skip tidak ikut dihitung). Sistem akan mencari operator yang levelnya mencukupi, dan menandai operator paling "hemat skill" sebagai Optimal.</p>
+    <p class="section-desc">Masukkan karakteristik order (yang relevan saja — kategori yang di-skip tidak ikut dihitung). Hasil ditampilkan sebagai tabel 40 operator, diurutkan dari yang paling optimal.</p>
     <div class="form-card">
-      <div class="form-grid">${formHtml}${manualHtml}</div>
+      <div class="form-grid">${textureHtml}${formHtml}${manualHtml}</div>
       <div style="margin-top:14px;display:flex;gap:8px">
         <button class="btn btn-primary" onclick="runMatch()">Cek Kelayakan</button>
         <button class="btn btn-ghost" onclick="renderCekKelayakan()">Reset Form</button>
@@ -328,126 +367,183 @@ function renderCekKelayakan(){
   `;
 }
 
+// ─── NARRATIVE GENERATORS ───────────────────────────────────
+function narrativeTexture(op, req){
+  if (!req) return 'Tidak relevan dengan order ini.';
+  const opLvl = op['Texture'];
+  const failing = req.wajibItems.filter(it => it.level > opLvl);
+  if (failing.length === 0) return 'Operator sudah menguasai seluruh jenis cacat yang wajib dihindari order ini.';
+  return 'Hati-hati, operator belum menguasai deteksi cacat ' + failing.map(it=>"'"+it.item+"' (level "+it.level+")").join(', ') + ', sedangkan order mewajibkan bebas dari cacat ini.';
+}
+function narrativeGeneric(cat, op, req){
+  if (!req) return 'Tidak relevan dengan order ini.';
+  const opLvl = op[cat];
+  if (opLvl >= req.level) return 'Kemampuan '+cat+' operator (level '+opLvl+') sudah memenuhi kebutuhan order (level '+req.level+' — '+req.label+').';
+  return 'Hati-hati, '+cat+' operator baru level '+opLvl+', sedangkan order butuh level '+req.level+' ('+req.label+') — kurang '+(req.level-opLvl)+' level.';
+}
+function narrativeGradeSize(cat, op, req){
+  if (!req) return 'Tidak relevan dengan order ini.';
+  const key = cat.toLowerCase();
+  const opCode = op[key];
+  const opLvl = codeLevel(cat, opCode);
+  if (opLvl >= req.level) return 'Sudah mencukupi untuk '+req.label+' yang diminta order (kemampuan operator setara '+opCode+').';
+  if (opCode.includes('Belum Paham')) return 'Operator belum memahami '+cat+' sama sekali (level 0) — belum sanggup untuk '+cat+' '+req.label+' yang diminta order.';
+  return 'Operator hanya bisa maksimal di '+cat+' '+opCode+' — belum sanggup untuk '+cat+' '+req.label+' yang diminta order.';
+}
+function narrativeSoftThick(cat, op, req){
+  if (!req) return 'Tidak relevan dengan order ini.';
+  const key = cat.toLowerCase();
+  const opCode = op[key];
+  const opLvl = codeLevel(cat, opCode);
+  if (opLvl >= req.level) return 'Sudah mencukupi (operator level '+opLvl+' — '+opCode+') untuk kebutuhan order level '+req.level+'.';
+  if (opCode.includes('Belum Paham')) return 'Operator belum memahami '+cat+' sama sekali (level 0), sedangkan order butuh minimal level '+req.level+'.';
+  const missing = KARAKTER[cat].filter(x => x.level > opLvl && x.level <= req.level && !x.code.includes('Belum Paham')).sort((a,b)=>b.level-a.level).map(x=>x.code);
+  return 'Operator sudah paham hingga '+opCode+' (level '+opLvl+'), tapi belum paham '+missing.join(' dan ')+'.';
+}
+function narrativeFor(cat, op, req){
+  if (cat === 'Texture') return narrativeTexture(op, req);
+  if (GENERIC_DROPDOWN_CATS.includes(cat)) return narrativeGeneric(cat, op, req);
+  if (cat === 'Grade' || cat === 'Size') return narrativeGradeSize(cat, op, req);
+  return narrativeSoftThick(cat, op, req);
+}
+
 function runMatch(){
-  const orderLevels = {};
-  CATS_NONKARAKTER.concat(CATS_KARAKTER_DROPDOWN).forEach(cat => {
-    const el = document.getElementById('ord-'+cat.replace(/\s/g,'_'));
-    const val = el.value;
+  const reqInfo = {};
+
+  // Texture (khusus, logic toleransi)
+  const tol = document.getElementById('ord-textureToleransi').value;
+  let wajibItems = NON_KARAKTER['Texture'];
+  if (tol === 'ya'){
+    const toleransiSet = new Set();
+    NON_KARAKTER['Texture'].forEach((it, idx) => {
+      const el = document.getElementById('tex-chk-'+idx);
+      if (el && el.checked) toleransiSet.add(it.item);
+    });
+    wajibItems = NON_KARAKTER['Texture'].filter(it => !toleransiSet.has(it.item));
+  }
+  if (wajibItems.length){
+    reqInfo['Texture'] = { level: Math.max(...wajibItems.map(i=>i.level)), wajibItems, label: 'wajib bebas dari '+wajibItems.length+' jenis cacat' };
+  }
+
+  GENERIC_DROPDOWN_CATS.forEach(cat => {
+    const val = document.getElementById('ord-'+cat.replace(/\s/g,'_')).value;
     if (!val) return;
-    orderLevels[cat] = CATS_NONKARAKTER.includes(cat) ? itemLevel(cat, val) : codeLevel(cat, val);
-    orderLevels['__label__'+cat] = val;
+    reqInfo[cat] = { level: itemLevel(cat, val), label: val };
+  });
+  CATS_KARAKTER_DROPDOWN.forEach(cat => {
+    const val = document.getElementById('ord-'+cat.replace(/\s/g,'_')).value;
+    if (!val) return;
+    reqInfo[cat] = { level: codeLevel(cat, val), label: val };
   });
   CATS_KARAKTER_MANUAL.forEach(cat => {
-    const el = document.getElementById('ord-'+cat);
-    const val = el.value;
+    const val = document.getElementById('ord-'+cat).value;
     if (val === '') return;
-    orderLevels[cat] = parseInt(val);
-    orderLevels['__label__'+cat] = 'Level '+val;
+    reqInfo[cat] = { level: parseInt(val), label: 'Level '+val };
   });
 
-  const relevantCats = ALL_CATS.filter(c => orderLevels[c] !== undefined);
-
+  const relevantCats = ALL_CATS.filter(c => reqInfo[c] !== undefined);
   if (relevantCats.length === 0){
     document.getElementById('matchResult').innerHTML = '<div class="gap-alert"><div class="gap-alert-title">Belum ada kategori dipilih</div><div class="gap-alert-body">Pilih minimal 1 karakteristik order untuk mulai pencocokan.</div></div>';
     return;
   }
 
-  const evaluated = OPERATORS.map(op => {
+  const results = OPERATORS.map(op => {
     const perCat = relevantCats.map(cat => {
       const opLvl = operatorLevelFor(op, cat);
-      const reqLvl = orderLevels[cat];
-      return { cat, opLvl, reqLvl, ok: opLvl >= reqLvl, gap: Math.max(0, reqLvl - opLvl), opLabel: operatorLabelFor(op, cat) };
+      const reqLvl = reqInfo[cat].level;
+      return { cat, opLvl, reqLvl, ok: opLvl >= reqLvl, gap: Math.max(0, reqLvl - opLvl), buffer: opLvl - reqLvl };
     });
     const layak = perCat.every(p => p.ok);
     const score = perCat.reduce((s,p) => s + p.opLvl, 0);
     const totalGap = perCat.reduce((s,p) => s + p.gap, 0);
-    return { op, perCat, layak, score, totalGap };
+    const mepet = perCat.some(p => p.ok && p.buffer === 0);
+    const narratives = {};
+    ALL_CATS.forEach(cat => { narratives[cat] = narrativeFor(cat, op, reqInfo[cat]); });
+    return { op, perCat, layak, score, totalGap, mepet, narratives };
   });
 
-  const layakList = evaluated.filter(e => e.layak);
-  const tidakList = evaluated.filter(e => !e.layak);
-  let optimalList = [];
+  const layakList = results.filter(r => r.layak);
+  let optimalSet = new Set();
   if (layakList.length){
-    const minScore = Math.min(...layakList.map(e => e.score));
-    optimalList = layakList.filter(e => e.score === minScore);
+    const minScore = Math.min(...layakList.map(r => r.score));
+    layakList.filter(r => r.score === minScore).forEach(r => optimalSet.add(r));
   }
-  const layakSajaList = layakList.filter(e => !optimalList.includes(e));
+  results.forEach(r => {
+    if (r.layak){
+      r.status = optimalSet.has(r) ? 'optimal' : (r.mepet ? 'pantauan' : 'layak');
+    } else {
+      r.status = r.totalGap <= 2 ? 'pantauan' : 'tidak';
+    }
+  });
 
   let gapRecommend = [];
   if (layakList.length === 0){
-    const minGap = Math.min(...tidakList.map(e => e.totalGap));
-    gapRecommend = tidakList.filter(e => e.totalGap === minGap);
-    gapLog.push({ orderLevels, relevantCats, recommend: gapRecommend.map(e => e.op.nama), timestamp: new Date().toLocaleString('id-ID') });
+    const failing = results.filter(r => !r.layak);
+    const minGap = Math.min(...failing.map(r => r.totalGap));
+    gapRecommend = failing.filter(r => r.totalGap === minGap);
+    gapLog.push({ relevantCats, recommend: gapRecommend.map(r => r.op.nama), timestamp: new Date().toLocaleString('id-ID') });
   }
 
-  lastMatch = { orderLevels, relevantCats, evaluated, optimalList, layakSajaList, tidakList, gapRecommend };
+  results.sort((a,b) => STATUS_META[a.status].rank - STATUS_META[b.status].rank || a.totalGap - b.totalGap || b.score - a.score);
 
+  lastMatch = { reqInfo, relevantCats, results, gapRecommend };
   renderMatchResult();
 }
 
 function renderMatchResult(){
-  const { relevantCats, orderLevels, optimalList, layakSajaList, tidakList, gapRecommend } = lastMatch;
-
-  const opCard = (e, colorClass) => {
-    return '<div class="op-card" onclick="showExplain(\''+e.op.absen+'\')">'
-      + '<span class="op-name">'+e.op.nama+'</span>'
-      + '<div class="op-meta">No. Absen '+e.op.absen+' &middot; Total skor relevan: '+e.score+'</div>'
-      + '</div>';
-  };
+  const { relevantCats, results, gapRecommend } = lastMatch;
+  const counts = { optimal:0, layak:0, pantauan:0, tidak:0 };
+  results.forEach(r => counts[r.status]++);
 
   const summaryHtml = `
     <div class="stat-row">
       <div class="stat-chip"><div class="stat-chip-label">KATEGORI DINILAI</div><div class="stat-chip-value">${relevantCats.length}</div></div>
-      <div class="stat-chip"><div class="stat-chip-label">OPTIMAL</div><div class="stat-chip-value">${optimalList.length}</div></div>
-      <div class="stat-chip"><div class="stat-chip-label">LAYAK (LAINNYA)</div><div class="stat-chip-value">${layakSajaList.length}</div></div>
-      <div class="stat-chip"><div class="stat-chip-label">TIDAK LAYAK</div><div class="stat-chip-value">${tidakList.length}</div></div>
+      <div class="stat-chip"><div class="stat-chip-label">🟢 OPTIMAL</div><div class="stat-chip-value">${counts.optimal}</div></div>
+      <div class="stat-chip"><div class="stat-chip-label">🔵 LAYAK</div><div class="stat-chip-value">${counts.layak}</div></div>
+      <div class="stat-chip"><div class="stat-chip-label">🟡 PERLU PANTAUAN</div><div class="stat-chip-value">${counts.pantauan}</div></div>
+      <div class="stat-chip"><div class="stat-chip-label">🔴 TIDAK LAYAK</div><div class="stat-chip-value">${counts.tidak}</div></div>
     </div>
   `;
 
-  const gapHtml = (optimalList.length === 0 && layakSajaList.length === 0) ? `
+  const gapHtml = (counts.optimal===0 && counts.layak===0 && !results.some(r=>r.status==='pantauan' && r.layak)) ? `
     <div class="gap-alert">
       <div class="gap-alert-title">Tidak ada operator yang layak untuk order ini</div>
       <div class="gap-alert-body">
-        Seluruh 40 operator berada di bawah level yang dibutuhkan order ini. Operator dengan gap (selisih) paling kecil — paling dekat untuk dikejar lewat training — direkomendasikan naik skill lebih dulu:<br><br>
-        ${gapRecommend.map(e => '<b>'+e.op.nama+'</b> (No. Absen '+e.op.absen+') — total gap '+e.totalGap+' level').join('<br>')}
+        Seluruh 40 operator berada di bawah level yang dibutuhkan order ini. Operator dengan gap paling kecil direkomendasikan naik skill lebih dulu:<br><br>
+        ${gapRecommend.map(r => '<b>'+r.op.nama+'</b> (No. Absen '+r.op.absen+') — total gap '+r.totalGap+' level').join('<br>')}
         <br><br>Rekomendasi ini juga otomatis tercatat di tab "Naik Skill".
       </div>
     </div>
   ` : '';
 
-  const resultHtml = `
-    ${summaryHtml}
-    <div class="result-grid">
-      <div class="result-col col-optimal">
-        <div class="result-col-title">✅ Optimal <span class="mono" style="font-size:10px;opacity:.7">(${optimalList.length})</span></div>
-        <div class="result-col-desc">Level paling pas/hemat — layak, dan levelnya paling mendekati kebutuhan order (tidak "membuang" operator berlevel tinggi untuk order yang levelnya rendah)</div>
-        ${optimalList.length ? optimalList.map(e=>opCard(e)).join('') : '<div class="empty-note">Tidak ada</div>'}
-      </div>
-      <div class="result-col col-layak">
-        <div class="result-col-title">✔️ Bisa / Layak <span class="mono" style="font-size:10px;opacity:.7">(${layakSajaList.length})</span></div>
-        <div class="result-col-desc">Memenuhi semua kategori yang relevan, tapi levelnya melebihi kebutuhan order (masih bisa dipakai, tapi bukan pilihan paling efisien)</div>
-        ${layakSajaList.length ? layakSajaList.map(e=>opCard(e)).join('') : '<div class="empty-note">Tidak ada</div>'}
-      </div>
-    </div>
-    ${gapHtml}
-    <div id="explainPanel"></div>
-  `;
-  document.getElementById('matchResult').innerHTML = resultHtml;
-}
+  const rows = results.map(r => {
+    const meta = STATUS_META[r.status];
+    const catCells = ALL_CATS.map(cat => '<td>'+r.narratives[cat]+'</td>').join('');
+    const sizeLvl = codeLevel('Size', r.op.size), gradeLvl = codeLevel('Grade', r.op.grade), softLvl = codeLevel('Softness', r.op.softness), thickLvl = codeLevel('Thickness', r.op.thickness);
+    const kode = sizeLvl+'_'+gradeLvl+'_'+softLvl+'_'+thickLvl;
+    const levelSum = sizeLvl+gradeLvl+softLvl+thickLvl;
+    return '<tr class="'+meta.rowClass+'">'
+      + '<td class="name-cell">'+r.op.nama+'</td>'
+      + '<td>'+r.op.absen+'</td>'
+      + '<td><b>'+meta.dot+' '+meta.label+'</b></td>'
+      + catCells
+      + '<td class="mono">'+kode+'</td>'
+      + '<td class="mono">'+levelSum+'</td>'
+      + '</tr>';
+  }).join('');
 
-function showExplain(absen){
-  if (!lastMatch) return;
-  const e = lastMatch.evaluated.find(x => x.op.absen === absen);
-  if (!e) return;
-  const lines = e.perCat.map(p => {
-    const status = p.ok ? 'Memenuhi (lebih/sama, selisih +'+(p.opLvl-p.reqLvl)+')' : 'KURANG '+p.gap+' level';
-    return '• '+p.cat+' — order butuh level '+p.reqLvl+', operator level '+p.opLvl+' ('+p.opLabel+') → '+status;
-  }).join('\n');
-  const verdict = e.layak ? (lastMatch.optimalList.includes(e) ? 'OPTIMAL — layak dan paling hemat skill' : 'LAYAK — memenuhi syarat, tapi levelnya di atas yang dibutuhkan') : 'TIDAK LAYAK';
-  document.getElementById('explainPanel').innerHTML = `
-    <div class="explain-panel">
-      <div class="explain-title"><span>Penjelasan — ${e.op.nama} (${e.op.absen})</span><button class="explain-close" onclick="document.getElementById('explainPanel').innerHTML=''">&#10005;</button></div>
-      <b>Status: ${verdict}</b>\n\n${lines}
+  document.getElementById('matchResult').innerHTML = `
+    ${summaryHtml}
+    ${gapHtml}
+    <div class="op-table-wrap" style="margin-top:14px;max-height:640px">
+      <table class="op-table report-table">
+        <thead><tr>
+          <th>Nama</th><th>No. Absen</th><th>Status Untuk Order</th>
+          ${ALL_CATS.map(c=>'<th>'+c+'</th>').join('')}
+          <th>Karakter Kulit (Kode Analisa)</th><th>Karakter Kulit (Level Analisa)</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
     </div>
   `;
 }
@@ -662,18 +758,19 @@ function answerChat(q){
 
   const foundOp = OPERATORS.find(op => ql.includes(op.nama.toLowerCase()));
   if (foundOp){
-    const e = lastMatch.evaluated.find(x => x.op.absen === foundOp.absen);
-    const lines = e.perCat.map(p => p.cat+': order butuh level '+p.reqLvl+', operator level '+p.opLvl+' ('+p.opLabel+') — '+(p.ok?'memenuhi':'kurang '+p.gap+' level')).join('. ');
-    const verdict = e.layak ? (lastMatch.optimalList.includes(e) ? 'OPTIMAL (layak & paling hemat skill)' : 'LAYAK, tapi bukan pilihan paling optimal') : 'TIDAK LAYAK';
-    return foundOp.nama+' berstatus '+verdict+' untuk order ini.\n'+lines;
+    const r = lastMatch.results.find(x => x.op.absen === foundOp.absen);
+    const meta = STATUS_META[r.status];
+    const lines = r.perCat.map(p => p.cat+': order butuh level '+p.reqLvl+', operator level '+p.opLvl+' — '+(p.ok?'memenuhi':'kurang '+p.gap+' level')).join('. ');
+    return foundOp.nama+' berstatus '+meta.label.toUpperCase()+' untuk order ini.\n'+lines;
   }
 
   if (ql.includes('optimal')){
-    if (!lastMatch.optimalList.length) return 'Tidak ada operator optimal untuk order terakhir — semua operator berada di bawah level yang dibutuhkan.';
-    return 'Operator optimal untuk order terakhir: '+lastMatch.optimalList.map(e=>e.op.nama).join(', ')+'.';
+    const list = lastMatch.results.filter(r=>r.status==='optimal');
+    if (!list.length) return 'Tidak ada operator optimal untuk order terakhir — semua operator berada di bawah level yang dibutuhkan.';
+    return 'Operator optimal untuk order terakhir: '+list.map(r=>r.op.nama).join(', ')+'.';
   }
   if (ql.includes('layak') || ql.includes('cocok') || ql.includes('bisa')){
-    const all = [...lastMatch.optimalList, ...lastMatch.layakSajaList].map(e=>e.op.nama);
+    const all = lastMatch.results.filter(r=>r.layak).map(r=>r.op.nama);
     if (!all.length) return 'Tidak ada operator yang layak untuk order terakhir.';
     return 'Operator yang layak untuk order terakhir: '+all.join(', ')+'.';
   }
