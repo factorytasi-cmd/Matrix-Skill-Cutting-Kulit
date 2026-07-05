@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LITRA-ASI — Skill Matrix Cutting Kulit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0C0B; --bg-1:#111310; --surface:#15160F; --surface-2:#1A1C17;
+    --border:#232620; --border-strong:#2A2D26;
+    --text:#F2F2EC; --text-2:#B8BAB2; --text-3:#8A8C82; --text-4:#5C5E58;
+    --amber:#F5A623; --amber-ink:#211802;
+    --red:#F87171; --red-bg:#1A1210; --red-border:#3A211E; --red-soft:#F0B4B1;
+    --orange:#FB923C; --orange-bg:#1D160E; --orange-border:#46311A; --orange-soft:#F5C79E;
+    --yellow:#EAB308; --yellow-bg:#1D1B0E; --yellow-border:#47401A; --yellow-soft:#F5D89E;
+    --green:#4ADE80; --green-bg:#101D14; --green-border:#1E4728; --green-soft:#9EF5BC;
+    --blue:#60A5FA; --blue-bg:#0E1720; --blue-border:#1E3A5F; --blue-soft:#A9CDF5;
+    --radius:8px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;-webkit-font-smoothing:antialiased}
+  .mono{font-family:'JetBrains Mono',monospace}
+  button{cursor:pointer;font-family:inherit}
+  select,input{font-family:'Sora',sans-serif}
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:99px}
+
+  /* APP BAR */
+  .appbar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:var(--bg-1);border-bottom:1px solid var(--border)}
+  .appbar-title{font-size:13px;font-weight:600;color:var(--text-2);letter-spacing:.01em}
+  .appbar-right{display:flex;align-items:center;gap:14px}
+  .live-badge{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-3)}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  /* CHAT HEADER */
+  .chatbar{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:#FFFFFF;font-family:'Syne',sans-serif;border-bottom:1px solid #e7e5df}
+  .chatbar-left{display:flex;align-items:center;gap:10px}
+  .chatbar-logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#3893D6 0%,#23978D 100%);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;flex-shrink:0}
+  .chatbar-name{font-size:14px;font-weight:700;color:#1a1a18;line-height:1.2}
+  .chatbar-tagline{font-size:10px;color:#a08a8a;line-height:1.3}
+  .chatbar-right{display:flex;align-items:center;gap:12px}
+  .chat-open-btn{font-size:11px;color:#6b6b67;background:none;border:none;display:flex;align-items:center;gap:3px}
+
+  .chatroom{background:#FFFFFF;border-bottom:1px solid #e7e5df;font-family:'Sora',sans-serif}
+  .chat-log{max-height:280px;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:10px}
+  .msg-user{align-self:flex-end;background:var(--amber);color:var(--amber-ink);font-size:12px;font-weight:500;padding:8px 12px;border-radius:12px 12px 2px 12px;max-width:78%}
+  .msg-bot{align-self:flex-start;display:flex;gap:8px;max-width:85%}
+  .msg-bot-avatar{width:22px;height:22px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#3893D6;background:#eaf3fb;font-family:'Syne',sans-serif}
+  .msg-bot-bubble{background:#f6f5f1;color:#33322d;font-size:12px;line-height:1.6;padding:9px 12px;border-radius:2px 12px 12px 12px;white-space:pre-line}
+  .chat-inputrow{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid #e7e5df}
+  .chat-input{flex:1;background:#f6f5f1;border:1px solid #e7e5df;border-radius:8px;padding:9px 12px;font-size:12px;font-family:'Sora',sans-serif;color:#1a1a18}
+  .chat-input:focus{outline:none;border-color:#3893D6}
+  .chat-icon-btn{width:32px;height:32px;border-radius:8px;background:#f6f5f1;border:1px solid #e7e5df;display:flex;align-items:center;justify-content:center;color:#6b6b67;flex-shrink:0}
+  .chat-icon-btn.send{background:var(--amber);color:var(--amber-ink);border:none}
+  .chat-hint{font-size:10px;color:#a3a199;padding:0 18px 10px}
+  .chat-suggest-row{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px 10px}
+  .chat-suggest-chip{font-size:10.5px;padding:6px 11px;border-radius:99px;background:#f6f5f1;border:1px solid #e7e5df;color:#4a4a45;font-family:'Sora',sans-serif}
+  .chat-suggest-chip:hover{background:#efeee9;border-color:#d8d6cf}
+
+  /* BODY */
+  .app-body{display:flex;min-height:calc(100vh - 140px)}
+  .sidebar{width:84px;flex-shrink:0;border-right:1px solid var(--border);padding:12px 0;background:var(--bg)}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-left:2px solid transparent;color:var(--text-3);cursor:pointer}
+  .nav-item.active{border-left-color:var(--amber);background:rgba(245,166,35,.08);color:var(--amber)}
+  .nav-item span{font-size:9px;letter-spacing:.02em;font-weight:500;text-align:center;line-height:1.2}
+  .nav-item svg{width:17px;height:17px}
+
+  .main{flex:1;padding:16px 18px;min-width:0}
+
+  .section-title{font-size:14px;font-weight:600;color:var(--text);margin:0 0 4px}
+  .section-desc{font-size:11px;color:var(--text-3);margin:0 0 14px;line-height:1.5}
+
+  /* FORM */
+  .form-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px}
+  .form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media (max-width:1000px){.form-grid{grid-template-columns:repeat(2,1fr)}}
+  .form-item{display:flex;flex-direction:column;gap:4px}
+  .form-label{font-size:10px;color:var(--text-3);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+  .form-select,.form-num{font-size:12px;padding:8px 9px;border-radius:6px;border:1px solid var(--border-strong);background:var(--bg-1);color:var(--text)}
+  .form-select:focus,.form-num:focus{outline:none;border-color:var(--amber)}
+  .btn{font-size:11px;padding:9px 16px;border-radius:6px;font-weight:600;border:1px solid var(--border-strong);background:var(--surface);color:var(--text-2)}
+  .btn:hover{border-color:var(--text-4)}
+  .btn-primary{background:var(--amber);color:var(--amber-ink);border:none}
+  .btn-primary:hover{filter:brightness(1.06)}
+  .btn-ghost{background:none;border:1px solid var(--border-strong);color:var(--text-3)}
+
+  /* RESULT */
+  .stat-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .stat-chip{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 12px;min-width:100px}
+  .stat-chip-label{font-size:9px;color:var(--text-3);font-weight:500;letter-spacing:.03em;margin-bottom:2px}
+  .stat-chip-value{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:500;color:var(--text)}
+
+  .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:900px){.result-grid{grid-template-columns:1fr}}
+  .result-col{border-radius:8px;padding:12px;min-height:120px}
+  .result-col-title{font-size:12px;font-weight:600;margin-bottom:4px}
+  .result-col-desc{font-size:10px;line-height:1.5;margin-bottom:10px}
+  .op-card{border-radius:6px;padding:9px 10px;margin-bottom:6px;font-size:11.5px;cursor:pointer}
+  .op-card:hover{filter:brightness(1.15)}
+  .op-name{font-weight:600;font-family:'JetBrains Mono',monospace}
+  .op-meta{font-size:10px;opacity:.8;margin-top:2px}
+  .empty-note{font-size:10.5px;opacity:.55;padding:6px 0}
+
+  .col-optimal{background:var(--green-bg);border:1px solid var(--green-border)}
+  .col-optimal .result-col-title{color:var(--green)}
+  .col-optimal .result-col-desc{color:#8FC2A0}
+  .col-optimal .op-card{background:#102916;color:var(--green-soft)}
+
+  .col-layak{background:var(--blue-bg);border:1px solid var(--blue-border)}
+  .col-layak .result-col-title{color:var(--blue)}
+  .col-layak .result-col-desc{color:#8CA8C4}
+  .col-layak .op-card{background:#0E1720;color:var(--blue-soft)}
+
+  .gap-alert{background:var(--orange-bg);border:1px solid var(--orange-border);border-radius:8px;padding:14px;margin-top:12px}
+  .gap-alert-title{color:var(--orange);font-size:12px;font-weight:600;margin-bottom:6px}
+  .gap-alert-body{font-size:11px;color:var(--orange-soft);line-height:1.6}
+
+  .explain-panel{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:14px;font-size:11.5px;line-height:1.7;color:var(--text-2);white-space:pre-line}
+  .explain-panel b{color:var(--text)}
+  .explain-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+  .explain-close{background:none;border:none;color:var(--text-4);font-size:14px}
+
+  /* FITUR 2 */
+  .rec-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+  @media (max-width:1100px){.rec-grid{grid-template-columns:1fr}}
+  .rec-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;max-height:420px;overflow-y:auto}
+  .rec-card-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px}
+  .rec-card-desc{font-size:10px;color:var(--text-3);line-height:1.5;margin-bottom:10px}
+  .rec-item{background:var(--surface-2);border-radius:6px;padding:8px 9px;margin-bottom:6px;font-size:11px;color:var(--text-2)}
+  .rec-item b{color:var(--text);font-family:'JetBrains Mono',monospace}
+  .badge-priority{display:inline-block;font-size:8.5px;font-weight:700;letter-spacing:.03em;color:var(--amber-ink);background:var(--amber);border-radius:99px;padding:1px 6px;margin-left:5px;vertical-align:middle}
+
+  /* DATA OPERATOR TABLE */
+  .op-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:auto}
+  table.op-table{border-collapse:collapse;width:100%;font-size:11px}
+  table.op-table th{background:var(--bg-1);color:var(--text-3);font-weight:600;text-align:left;padding:8px 10px;font-size:9.5px;letter-spacing:.02em;text-transform:uppercase;position:sticky;top:0;white-space:nowrap}
+  table.op-table td{padding:7px 10px;border-top:1px solid var(--border);white-space:nowrap;color:var(--text-2)}
+  table.op-table td.name-cell{color:var(--text);font-weight:600;font-family:'JetBrains Mono',monospace}
+  table.op-table td.editable{cursor:text}
+  table.op-table td.editable:hover{background:var(--surface-2)}
+  table.op-table input.cell-edit{width:100%;background:var(--bg-1);border:1px solid var(--amber);border-radius:4px;color:var(--text);font-size:11px;padding:3px 5px}
+
+  /* PANDUAN */
+  .guide-section{margin-bottom:22px}
+  .guide-title{font-size:13px;font-weight:600;color:var(--amber);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  .guide-table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px}
+  .guide-table th{text-align:left;background:var(--surface);color:var(--text-3);padding:6px 9px;font-size:9.5px;text-transform:uppercase;letter-spacing:.02em}
+  .guide-table td{padding:7px 9px;border-top:1px solid var(--border);color:var(--text-2);line-height:1.5}
+  .guide-table td.lvl{font-family:'JetBrains Mono',monospace;color:var(--amber);font-weight:600;white-space:nowrap}
+  .guide-table td.code{font-family:'JetBrains Mono',monospace;color:var(--text);white-space:nowrap}
+
+  .footer{padding:8px 18px;background:var(--bg-1);border-top:1px solid var(--border);font-size:9px;color:var(--text-4);font-family:'JetBrains Mono',monospace;display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+
+<div class="appbar">
+  <div class="appbar-title">Skill Matrix Intelligence — Cutting Kulit</div>
+  <div class="appbar-right">
+    <div class="live-badge"><div class="live-dot"></div><span>40 Operator Termuat</span></div>
+    <span class="mono" id="dateNow" style="font-size:11px;color:var(--text-3)"></span>
+  </div>
+</div>
+
+<div class="chatbar" onclick="toggleChat()" style="cursor:pointer">
+  <div class="chatbar-left">
+    <div class="chatbar-logo">L</div>
+    <div>
+      <div class="chatbar-name">LITRA-ASI</div>
+      <div class="chatbar-tagline">Lean Intelligence Tracking &amp; Realtime Analytics - ASI</div>
+    </div>
+  </div>
+  <div class="chatbar-right">
+    <button class="chat-open-btn" id="chatOpenLabel">Buka &#9662;</button>
+  </div>
+</div>
+
+<div class="chatroom" id="chatRoom" style="display:none">
+  <div class="chat-log" id="chatLog">
+    <div class="msg-bot">
+      <div class="msg-bot-avatar">L</div>
+      <div class="msg-bot-bubble">Tanya kenapa suatu operator cocok/tidak cocok untuk order terakhir yang dicek, atau siapa yang paling perlu naik skill. Jawaban dihasilkan langsung dari data &amp; hasil perhitungan skill matrix (logic rule-based, bukan model AI eksternal), jadi selalu konsisten dengan angka di dashboard.</div>
+    </div>
+  </div>
+  <div class="chat-suggest-row" id="chatSuggestRow">
+    <button class="chat-suggest-chip" onclick="askSuggested('Siapa operator optimal untuk order terakhir?')">Siapa operator optimal untuk order terakhir?</button>
+    <button class="chat-suggest-chip" onclick="askSuggested('Kenapa AHMAD tidak layak?')">Kenapa AHMAD tidak layak?</button>
+    <button class="chat-suggest-chip" onclick="askSuggested('Siapa yang perlu naik skill?')">Siapa yang perlu naik skill?</button>
+  </div>
+  <div class="chat-inputrow">
+    <input type="text" class="chat-input" id="chatInput" placeholder="Tulis pertanyaan, misal: kenapa LUKMAN tidak lolos?" onkeydown="if(event.key==='Enter')sendChat()">
+    <button class="chat-icon-btn send" onclick="sendChat()" title="Kirim" aria-label="Kirim">&#10148;</button>
+  </div>
+  <div class="chat-hint">Asisten berbasis logic skill matrix — one-shot, tiap pertanyaan dijawab dari hasil pencocokan yang tersimpan di sesi ini.</div>
+</div>
+
+<div class="app-body">
+  <div class="sidebar" id="sidebar">
+    <div class="nav-item active" data-tab="cek">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 6L9 17l-5-5"/></svg>
+      <span>Cek<br>Kelayakan</span>
+    </div>
+    <div class="nav-item" data-tab="rekomendasi">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L3 14h7l-1 8 11-13h-7l1-7z"/></svg>
+      <span>Naik<br>Skill</span>
+    </div>
+    <div class="nav-item" data-tab="data">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M9 4v18"/></svg>
+      <span>Data<br>Operator</span>
+    </div>
+    <div class="nav-item" data-tab="panduan">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5A2.5 2.5 0 006.5 22H20V2H6.5A2.5 2.5 0 004 4.5v15z"/></svg>
+      <span>Panduan</span>
+    </div>
+  </div>
+
+  <div class="main">
+    <div id="mainContent"></div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>LITRA-ASI &middot; PT. ASI &middot; Divisi Cutting Kulit</span>
+  <span id="footerInfo">40 operator &middot; 10 kategori skill</span>
+</div>
+
+<script>
+const NON_KARAKTER = {"Texture": [{"item": "Cacat", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Mengelupas", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Rapuh", "level": 4, "ket": "Jenis kulit rapuh paling sulit dipahami, karena terkadang terlihat dari segi tekstur yang kering. tapi ada beberapa kulit, yang seperti padat dan tidak kering tapi ternyata rapuh"}, {"item": "Sirata", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Buff", "level": 2, "ket": "Buff merupakan permukaan kulit yang porinya menghilang, tapi tidak sampai terlihat suede nya. Sulit untuk menhindari karena cukup samar jika dilihat dari jarak pandang biasa bukan dekat"}, {"item": "Singkayo", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Bercak Hitam", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Bercak Putih", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Gembos", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Snai", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "Texture Tidak Rata", "level": 1, "ket": "Karena mudah untuk dipahami"}, {"item": "BF", "level": 3, "ket": "Tekstur kulit campuran, antara Buff dengan yang pori nya terlihat. terkadang operator cutting salah menempatak Cetakan Potong yang dimana harusnya ada yang buff dan ada porinya, malah seringnya full Buff"}], "Consumption": [{"item": "Irit", "level": 3, "ket": "arti irit adalah dapat menghasilkan lebih banyak hasil cutting dibandingkan perintah kerja. ini tidak mudah karena butuh pemahaman khusus agar hasil cutting melelbihi perintah kerja dengan kualitas yang baik"}, {"item": "Normal", "level": 2, "ket": "Consumption Normal adalah menghasilkan hasil cutting sesuai dengan perintah kerja, dengan kualitas yang baik"}, {"item": "Boros", "level": 1, "ket": "Consumption Boros adalah menghasilkan hasil cutting lebih rendah dari perintah kerja, atau hasil cutting memiliki kualitas yang buruk sehingga tidak bisa dipakai"}], "Metode": [{"item": "Toggle", "level": 1, "ket": "Proses termudah dalam flow cutting kulit"}, {"item": "Patch Ibu Jari", "level": 2, "ket": "Proses cutting hanya 2 part, dan mudah"}, {"item": "Combo + Thumb Full + Machi", "level": 3, "ket": "Proses cukup mudah, karena jika ada machi maka sisaan kulit bisa digunakan untuk machi, sehingga area-area sulit bisa di alokasikan untuk machi"}, {"item": "Combo + Thumb Full + Tanpa Machi", "level": 5, "ket": "Proses cutting tersulit, karena beberapa area kritis pada kulit harus di cutting untuk Pola Body dan Ibu Jari Full, dimana hasil cutting pola body dan ibu jari harus bagus untuk menghasilkan glove yang bagus"}, {"item": "Combo + Thumb Combo + Machi", "level": 3, "ket": "Proses cukup mudah, karena jika ada machi maka sisaan kulit bisa digunakan untuk machi, sehingga area-area sulit bisa di alokasikan untuk machi"}, {"item": "Combo + Thumb Combo + Tanpa Machi", "level": 4, "ket": "Proses cutting tersulit, karena beberapa area kritis pada kulit harus di cutting untuk Pola Body, dimana hasil cutting pola body dan ibu jari harus bagus untuk menghasilkan glove yang bagus. namun karena ibu jari nya bukan full, sehingga area kritis pada kulit dapat di alokasikan untuk ibu jari combo yang dimana hasil cutting kurang baik masih bisa OK untuk glove"}, {"item": "Pola Full", "level": 3, "ket": "Proses cukup mudah, karena jika ada machi maka sisaan kulit bisa digunakan untuk machi, sehingga area-area sulit bisa di alokasikan untuk machi"}], "Serat Kulit": [{"item": "Lear Leor", "level": 3, "ket": "Serat Lear Leor adalah serat yang ada ke segala arah, sehingga operator cutting tidak mudah menentukan arah cetakan cutting, perlu pengetahuan dan metode khusus"}, {"item": "Normal", "level": 1, "ket": "Serat Normal adalah serat yang umum ada pada kulit, sehingga operator cutting dapat menentukan arah cetakan dengan mudah"}, {"item": "Gombor", "level": 2, "ket": "Serat Gombor adalah serat yang besar, ini tidak baik untuk hasil jadi glove, operator cutting tidak bisa langusng melakukan proses cutting, tetapi harus memperbaiki dulu arah serat nya"}, {"item": "Ngaret", "level": 3, "ket": "Serat Ngaret adalah arah serat yang selalu memberikan elastisitas seperti karet, bukan yang memanjang, ini perlu metode khusus agar operator bisa membedakan mana serat ngaret mana salah arah serat"}], "Pcs Warna": [{"item": "Putih (Snow White, Wet White)", "level": 1, "ket": "meng-cutting kulit pcs warna putih itu mudah, karena antar part/panel satu dengan yang lainnya secara warna lebih mirip, dikarenakan warna dalam 1 lembar kulit stabil"}, {"item": "Natural/Black", "level": 2, "ket": "meng-cutting kulit pcs warna Natural/Black itu kesulitan medium/sedang, karena antar part/panel satu dengan yang lainnya ada kemungkinan beda warna mesikipun tidak jauh"}, {"item": "Warna", "level": 3, "ket": "meng-cutting kulit pcs warna itu kesulitannya tinggi, karena 1 lembar kulit ada kemungkinan shading warna, sehingga peluang antara part/panel satu dengan lainyya akan berbeda warnanya dan mempengaruhi hasil akhir"}], "Pair Warna": [{"item": "Putih (Snow White, Wet White)", "level": 1, "ket": "meng-cutting kulit pair warna putih itu mudah, karena antar part/panel satu dengan yang lainnya secara warna lebih mirip, dikarenakan warna dalam 1 lembar kulit stabil"}, {"item": "Natural/Black", "level": 2, "ket": "meng-cutting kulit pair warna Natural/Black itu kesulitan medium/sedang, karena antar part/panel satu dengan yang lainnya ada kemungkinan beda warna mesikipun tidak jauh dan harus sama dengan pola pasangannya karena pair"}, {"item": "Warna", "level": 3, "ket": "meng-cutting kulit pair warna itu kesulitannya tinggi, karena 1 lembar kulit ada kemungkinan shading warna, sehingga peluang antara part/panel satu dengan lainyya akan berbeda warnanya dan mempengaruhi hasil akhir dan harus sama dengan pola pasangannya karena pair"}]};
+const KARAKTER = {"Softness": [{"code": "S1", "level": 3, "ket": "S1 artinya hasil cutting harus memiliki softness yang baik. softness juga bisa diartikan stretch kulit yang baik, jadi operator harus memastikan bahwa kulit yang akan di cutting memiliki stretch atau softness yang baik"}, {"code": "S2", "level": 2, "ket": "S2 artinya hasil cutting harus memiliki softness yang normal saja. dan rata-rata kulit lembaran itu ada pada kondisi S2 sehingga operator lebih mudah menganalisanya"}, {"code": "S3", "level": 1, "ket": "S3 artinya hasil cutting harus memiliki tingkat softness yang kurang soft, dan untuk tingkat softess rendah biasanya cara cutting lebih mudah"}, {"code": "Softness Belum Paham", "level": 0, "ket": "Operator belum paham mengenai S1 S2 dan S3"}], "Thickness": [{"code": "Terlalu Tipis/Tebal", "level": 1, "ket": "Operator mudah menganalisa lembar kulit yang \"Terlalu\" Tipis/Tebal, karena biasanya yang \"Terlalu\" itu lebih dari range yang ditentukan, baik itu lebih besar atau lebih kecil"}, {"code": "Tebal", "level": 2, "ket": "Operator sulit membedakan Kulit yang \"Tebal\". \"Tebal\" itu dalam artian masih didalam range, tapi untuk size tertentu tidak boleh. Biasanya Range Ketebalan itu 0mm - 0.1mm, (misal ketebalan standard nya 0.45mm - 0.55mm). dibawah Range 0 - 0.05mm itu biasanya untuk size Ledies-S (misal 0.45 mm - 0.5 mm), dan untuk diatas 0.05 - 0.1 itu untuk Size Regular Kecil dan Sedang (misal 0.5 mm - 0.55 mm), namuan untuk range 0.1 - 0.2 untuk size Besar itu masih boelh (0.55 - 0.65)"}, {"code": "Normal", "level": 3, "ket": "Ketebalan Normal adalah ketebalan yang tepat di tengah range, misal 0.45 mm - 0.55 mm. artinya ketebalan normal itu ada diangka 0.5 tanpa range. dan operator tidak bisa mengetahui kulit yang benar-benar normal ketebalannya"}, {"code": "Tipis", "level": 2, "ket": "Operator sulit membedakan Kulit yang \"Tipis\". \"Tipis\" itu dalam artian masih didalam range, tapi untuk size tertentu tidak boleh. Biasanya Range Ketebalan itu 0mm - 0.1mm, (misal ketebalan standard nya 0.45mm - 0.55mm). dibawah Range 0 - 0.05mm itu biasanya untuk size Ledies-S (misal 0.45 mm - 0.5 mm), dan untuk diatas 0.05 - 0.1 itu untuk Size Regular Kecil dan Sedang (misal 0.5 mm - 0.55 mm), namuan untuk range 0.1 - 0.2 untuk size Besar itu masih boelh (0.55 - 0.65)"}, {"code": "Thickness Belum Paham", "level": 0, "ket": "Operator tidak bisa membedakan mana kulit terlalu tebal/tipis, dengan kulit tebal/tipis, apalagi kulit normal"}], "Grade": [{"code": "A", "level": 7, "ket": "Grade dimana glove biasanya Range Ketebalannya kecil, dan untuk nilai softness nya tinggi, serta range nilai softnes nya rendah, jadi nilai softnes S1 - S3 hanya maximal selisih 3"}, {"code": "AB", "level": 6, "ket": "Grade dimana glove biasanya Range Ketebalannya kecil, dan untuk nilai softness nya Lebih kecil 3 Softness dari Grade A, serta range nilai softnes nya rendah, jadi nilai softnes S1 - S3 hanya maximal selisih 3"}, {"code": "BC", "level": 5, "ket": "Grade dimana glove biasanya Range Ketebalannya kecil, dan untuk nilai softness nya Lebih kecil 3 Softness dari Grade AB, serta range nilai softnes nya rendah, jadi nilai softnes S1 - S3 hanya maximal selisih 3"}, {"code": "CD", "level": 4, "ket": "Grade dimana glove biasanya Range Ketebalannya kecil, dan untuk nilai softness nya Lebih kecil 3 Softness dari Grade BC, serta range nilai softnes nya rendah, jadi nilai softnes S1 - S3 hanya maximal selisih 3"}, {"code": "D", "level": 3, "ket": "Grade dimana glove biasanya Range Ketebalannya kecil, dan untuk nilai softness nya Lebih kecil 3 Softness dari Grade CD, serta range nilai softnes nya rendah, jadi nilai softnes S1 - S3 hanya maximal selisih 3"}, {"code": "E", "level": 2, "ket": "Grade dimana glove biasanya Range Ketebalannya kecil, dan untuk nilai softness nya Lebih kecil 3 Softness dari Grade D, serta range nilai softnes nya rendah, jadi nilai softnes S1 - S3 hanya maximal selisih 3"}, {"code": "R", "level": 1, "ket": "Grade dimana glove biasanya Range Ketebalannya kecil, dan untuk nilai softness nya Lebih kecil 3 Softness dari Grade E, serta range nilai softnes nya rendah, jadi nilai softnes S1 - S3 hanya maximal selisih 3"}, {"code": "Grade Belum Paham", "level": 0, "ket": "Operator belum pagam grade"}], "Size": [{"code": "Ledies - S", "level": 4, "ket": "Size terkecil, biasanya harus memiliki softness yang baik di gradenya, dan toleransi ketebalan yang kecil. karena jika ketebalannya ada di batas atas ketebalan, akan tidak enak dipakai"}, {"code": "Regular Kecil M-ML", "level": 2, "ket": "Kelompok Size kedua terkecil, ini lebih mudah dari size Ledies-S karena softness dan toleransi ketebalannya lebih besar dari Ledies-S"}, {"code": "Regular Sedang L", "level": 1, "ket": "Kelompok Size ini relatif mudah, karena ke umum-an kulit berada di karaketer size ini"}, {"code": "Regular Besar (> XL)", "level": 3, "ket": "Size Reguler besar, itu lebih mudah dari segi softness dan ketebalan, tapi tingkat kesulitan biasanya di kecukupan, ketika size nya besar, tapi bentuk lembar kulit kecil itu bisa mengakibatkan boros"}, {"code": "Size Belum Paham", "level": 0, "ket": null}]};
+const OPERATORS = [{"nama": "AHMAD", "absen": "D.00001", "Texture": 4, "Consumption": 1, "Metode": 4, "Serat Kulit": 3, "Pcs Warna": 3, "Pair Warna": 3, "size": "Regular Kecil M-ML", "grade": "Grade Belum Paham", "softness": "S1", "thickness": "Tebal"}, {"nama": "LUKMAN", "absen": "D.00002", "Texture": 4, "Consumption": 1, "Metode": 3, "Serat Kulit": 3, "Pcs Warna": 3, "Pair Warna": 1, "size": "Size Belum Paham", "grade": "R", "softness": "Softness Belum Paham", "thickness": "Normal"}, {"nama": "FIRDAUS", "absen": "D.00003", "Texture": 4, "Consumption": 3, "Metode": 2, "Serat Kulit": 2, "Pcs Warna": 2, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "E", "softness": "S3", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "WISHAL", "absen": "D.00004", "Texture": 3, "Consumption": 3, "Metode": 3, "Serat Kulit": 3, "Pcs Warna": 2, "Pair Warna": 1, "size": "Regular Sedang L", "grade": "D", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "DAFFA", "absen": "D.00005", "Texture": 3, "Consumption": 3, "Metode": 1, "Serat Kulit": 2, "Pcs Warna": 1, "Pair Warna": 1, "size": "Regular Besar (> XL)", "grade": "Grade Belum Paham", "softness": "S3", "thickness": "Normal"}, {"nama": "NUGRAHA", "absen": "D.00006", "Texture": 4, "Consumption": 1, "Metode": 4, "Serat Kulit": 2, "Pcs Warna": 3, "Pair Warna": 3, "size": "Regular Kecil M-ML", "grade": "CD", "softness": "S1", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "ZALINAR", "absen": "D.00007", "Texture": 3, "Consumption": 3, "Metode": 1, "Serat Kulit": 3, "Pcs Warna": 1, "Pair Warna": 3, "size": "Regular Besar (> XL)", "grade": "Grade Belum Paham", "softness": "S1", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "MUKHFINA", "absen": "D.00008", "Texture": 4, "Consumption": 3, "Metode": 2, "Serat Kulit": 2, "Pcs Warna": 3, "Pair Warna": 2, "size": "Size Belum Paham", "grade": "E", "softness": "S3", "thickness": "Normal"}, {"nama": "HILMA", "absen": "D.00009", "Texture": 2, "Consumption": 2, "Metode": 3, "Serat Kulit": 1, "Pcs Warna": 3, "Pair Warna": 1, "size": "Ledies - S", "grade": "Grade Belum Paham", "softness": "S1", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "SALSA", "absen": "D.00010", "Texture": 3, "Consumption": 2, "Metode": 5, "Serat Kulit": 1, "Pcs Warna": 3, "Pair Warna": 2, "size": "Size Belum Paham", "grade": "E", "softness": "Softness Belum Paham", "thickness": "Thickness Belum Paham"}, {"nama": "BILA", "absen": "D.00011", "Texture": 4, "Consumption": 2, "Metode": 4, "Serat Kulit": 3, "Pcs Warna": 3, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "AB", "softness": "Softness Belum Paham", "thickness": "Thickness Belum Paham"}, {"nama": "LILIS", "absen": "D.00012", "Texture": 3, "Consumption": 3, "Metode": 5, "Serat Kulit": 2, "Pcs Warna": 3, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "BC", "softness": "S1", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "KARTIWI", "absen": "D.00013", "Texture": 1, "Consumption": 1, "Metode": 5, "Serat Kulit": 2, "Pcs Warna": 1, "Pair Warna": 3, "size": "Ledies - S", "grade": "E", "softness": "S2", "thickness": "Thickness Belum Paham"}, {"nama": "FAJAR", "absen": "D.00014", "Texture": 1, "Consumption": 2, "Metode": 2, "Serat Kulit": 2, "Pcs Warna": 2, "Pair Warna": 1, "size": "Regular Besar (> XL)", "grade": "CD", "softness": "Softness Belum Paham", "thickness": "Normal"}, {"nama": "AGUNG", "absen": "D.00015", "Texture": 3, "Consumption": 3, "Metode": 1, "Serat Kulit": 1, "Pcs Warna": 3, "Pair Warna": 2, "size": "Regular Sedang L", "grade": "R", "softness": "S2", "thickness": "Tebal"}, {"nama": "TRI", "absen": "D.00016", "Texture": 2, "Consumption": 2, "Metode": 2, "Serat Kulit": 2, "Pcs Warna": 2, "Pair Warna": 2, "size": "Size Belum Paham", "grade": "D", "softness": "S1", "thickness": "Normal"}, {"nama": "LAKSONO", "absen": "D.00017", "Texture": 4, "Consumption": 2, "Metode": 3, "Serat Kulit": 2, "Pcs Warna": 1, "Pair Warna": 1, "size": "Ledies - S", "grade": "R", "softness": "S3", "thickness": "Normal"}, {"nama": "AFIF", "absen": "D.00018", "Texture": 2, "Consumption": 3, "Metode": 1, "Serat Kulit": 1, "Pcs Warna": 1, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "R", "softness": "S1", "thickness": "Thickness Belum Paham"}, {"nama": "YUNALDI", "absen": "D.00019", "Texture": 2, "Consumption": 3, "Metode": 3, "Serat Kulit": 2, "Pcs Warna": 2, "Pair Warna": 1, "size": "Regular Besar (> XL)", "grade": "CD", "softness": "S3", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "REZA", "absen": "D.00020", "Texture": 4, "Consumption": 3, "Metode": 5, "Serat Kulit": 1, "Pcs Warna": 1, "Pair Warna": 3, "size": "Ledies - S", "grade": "Grade Belum Paham", "softness": "S1", "thickness": "Thickness Belum Paham"}, {"nama": "DAMARA", "absen": "D.00021", "Texture": 3, "Consumption": 3, "Metode": 5, "Serat Kulit": 2, "Pcs Warna": 3, "Pair Warna": 3, "size": "Size Belum Paham", "grade": "CD", "softness": "S2", "thickness": "Thickness Belum Paham"}, {"nama": "AJI", "absen": "D.00022", "Texture": 3, "Consumption": 3, "Metode": 5, "Serat Kulit": 1, "Pcs Warna": 3, "Pair Warna": 3, "size": "Regular Besar (> XL)", "grade": "E", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "SAEFUL", "absen": "D.00023", "Texture": 1, "Consumption": 2, "Metode": 1, "Serat Kulit": 1, "Pcs Warna": 2, "Pair Warna": 2, "size": "Regular Besar (> XL)", "grade": "AB", "softness": "S3", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "GHINA", "absen": "D.00024", "Texture": 4, "Consumption": 2, "Metode": 2, "Serat Kulit": 1, "Pcs Warna": 3, "Pair Warna": 2, "size": "Regular Kecil M-ML", "grade": "E", "softness": "S3", "thickness": "Normal"}, {"nama": "NOVITA", "absen": "D.00025", "Texture": 4, "Consumption": 1, "Metode": 4, "Serat Kulit": 3, "Pcs Warna": 3, "Pair Warna": 2, "size": "Regular Besar (> XL)", "grade": "AB", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "LIES", "absen": "D.00026", "Texture": 3, "Consumption": 1, "Metode": 3, "Serat Kulit": 1, "Pcs Warna": 3, "Pair Warna": 3, "size": "Regular Besar (> XL)", "grade": "Grade Belum Paham", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "DIANA", "absen": "D.00027", "Texture": 1, "Consumption": 2, "Metode": 3, "Serat Kulit": 1, "Pcs Warna": 3, "Pair Warna": 3, "size": "Regular Sedang L", "grade": "BC", "softness": "Softness Belum Paham", "thickness": "Thickness Belum Paham"}, {"nama": "ANZIS", "absen": "D.00028", "Texture": 2, "Consumption": 3, "Metode": 3, "Serat Kulit": 2, "Pcs Warna": 1, "Pair Warna": 2, "size": "Regular Sedang L", "grade": "D", "softness": "S3", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "PRATAMA", "absen": "D.00029", "Texture": 1, "Consumption": 1, "Metode": 2, "Serat Kulit": 3, "Pcs Warna": 1, "Pair Warna": 2, "size": "Regular Kecil M-ML", "grade": "A", "softness": "S1", "thickness": "Thickness Belum Paham"}, {"nama": "DITYA", "absen": "D.00030", "Texture": 2, "Consumption": 1, "Metode": 3, "Serat Kulit": 1, "Pcs Warna": 2, "Pair Warna": 2, "size": "Regular Besar (> XL)", "grade": "E", "softness": "S3", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "MAHARYALDI", "absen": "D.00031", "Texture": 4, "Consumption": 3, "Metode": 2, "Serat Kulit": 2, "Pcs Warna": 1, "Pair Warna": 2, "size": "Ledies - S", "grade": "Grade Belum Paham", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "ALFI", "absen": "D.00032", "Texture": 4, "Consumption": 1, "Metode": 3, "Serat Kulit": 1, "Pcs Warna": 2, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "Grade Belum Paham", "softness": "S2", "thickness": "Thickness Belum Paham"}, {"nama": "ROY", "absen": "D.00033", "Texture": 3, "Consumption": 3, "Metode": 3, "Serat Kulit": 3, "Pcs Warna": 2, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "D", "softness": "S1", "thickness": "Normal"}, {"nama": "SURYO", "absen": "D.00034", "Texture": 4, "Consumption": 2, "Metode": 1, "Serat Kulit": 2, "Pcs Warna": 3, "Pair Warna": 2, "size": "Regular Kecil M-ML", "grade": "D", "softness": "S1", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "AQILA", "absen": "D.00035", "Texture": 1, "Consumption": 1, "Metode": 4, "Serat Kulit": 3, "Pcs Warna": 3, "Pair Warna": 2, "size": "Regular Sedang L", "grade": "D", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "IKA", "absen": "D.00036", "Texture": 1, "Consumption": 1, "Metode": 2, "Serat Kulit": 2, "Pcs Warna": 2, "Pair Warna": 2, "size": "Regular Besar (> XL)", "grade": "BC", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "HANISA", "absen": "D.00037", "Texture": 3, "Consumption": 3, "Metode": 3, "Serat Kulit": 1, "Pcs Warna": 1, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "Grade Belum Paham", "softness": "S1", "thickness": "Thickness Belum Paham"}, {"nama": "ELA", "absen": "D.00038", "Texture": 2, "Consumption": 2, "Metode": 2, "Serat Kulit": 2, "Pcs Warna": 3, "Pair Warna": 3, "size": "Regular Kecil M-ML", "grade": "CD", "softness": "Softness Belum Paham", "thickness": "Terlalu Tipis/Tebal"}, {"nama": "SITI", "absen": "D.00039", "Texture": 1, "Consumption": 2, "Metode": 3, "Serat Kulit": 1, "Pcs Warna": 1, "Pair Warna": 1, "size": "Regular Kecil M-ML", "grade": "D", "softness": "S3", "thickness": "Thickness Belum Paham"}, {"nama": "FOREMAN", "absen": "D.00040", "Texture": 3, "Consumption": 2, "Metode": 5, "Serat Kulit": 2, "Pcs Warna": 1, "Pair Warna": 2, "size": "Regular Kecil M-ML", "grade": "D", "softness": "S1", "thickness": "Normal"}];
+
+const CATS_NONKARAKTER = ['Texture','Consumption','Metode','Serat Kulit','Pcs Warna','Pair Warna'];
+const CATS_KARAKTER_DROPDOWN = ['Grade','Size'];
+const CATS_KARAKTER_MANUAL = ['Softness','Thickness'];
+const ALL_CATS = [...CATS_NONKARAKTER, ...CATS_KARAKTER_DROPDOWN, ...CATS_KARAKTER_MANUAL];
+
+document.getElementById('dateNow').textContent = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+
+// ─── LEVEL LOOKUP HELPERS ──────────────────────────────────
+function itemLevel(cat, itemName){
+  const list = NON_KARAKTER[cat] || [];
+  const found = list.find(x => x.item === itemName);
+  return found ? found.level : null;
+}
+function codeLevel(cat, code){
+  const list = KARAKTER[cat] || [];
+  const found = list.find(x => x.code === code);
+  return found ? found.level : null;
+}
+function operatorLevelFor(op, cat){
+  if (CATS_NONKARAKTER.includes(cat)) return op[cat];
+  if (cat === 'Grade') return codeLevel('Grade', op.grade);
+  if (cat === 'Size') return codeLevel('Size', op.size);
+  if (cat === 'Softness') return codeLevel('Softness', op.softness);
+  if (cat === 'Thickness') return codeLevel('Thickness', op.thickness);
+  return null;
+}
+function operatorLabelFor(op, cat){
+  if (CATS_NONKARAKTER.includes(cat)) return op[cat] + ' (level ' + op[cat] + ')';
+  if (cat === 'Grade') return op.grade;
+  if (cat === 'Size') return op.size;
+  if (cat === 'Softness') return op.softness;
+  if (cat === 'Thickness') return op.thickness;
+}
+
+// ─── NAV SWITCH ────────────────────────────────────────────
+let currentTab = 'cek';
+document.getElementById('sidebar').addEventListener('click', (e) => {
+  const item = e.target.closest('.nav-item');
+  if (!item) return;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  item.classList.add('active');
+  currentTab = item.dataset.tab;
+  renderTab();
+});
+function renderTab(){
+  if (currentTab === 'cek') renderCekKelayakan();
+  else if (currentTab === 'rekomendasi') renderRekomendasi();
+  else if (currentTab === 'data') renderDataOperator();
+  else if (currentTab === 'panduan') renderPanduan();
+}
+
+// ─── SESSION STATE ─────────────────────────────────────────
+let lastMatch = null;      // { orderLevels, relevantCats, optimal:[...], layak:[...], tidak:[...], gapRecommend:[...] }
+let gapLog = [];           // riwayat order yang gagal total (tidak ada operator layak) selama sesi ini
+
+// ══════════════════════════════════════════════════════════
+// TAB 1 — CEK KELAYAKAN OPERATOR
+// ══════════════════════════════════════════════════════════
+function renderCekKelayakan(){
+  const dropdownFields = [...CATS_NONKARAKTER, ...CATS_KARAKTER_DROPDOWN];
+  const formHtml = dropdownFields.map(cat => {
+    let options;
+    if (CATS_NONKARAKTER.includes(cat)){
+      options = NON_KARAKTER[cat].map(x => '<option value="'+x.item+'">'+x.item+' (level '+x.level+')</option>').join('');
+    } else {
+      options = KARAKTER[cat].filter(x => !x.code.includes('Belum Paham')).map(x => '<option value="'+x.code+'">'+x.code+' (level '+x.level+')</option>').join('');
+    }
+    return '<div class="form-item"><label class="form-label">'+cat+'</label>'
+      + '<select class="form-select" id="ord-'+cat.replace(/\s/g,'_')+'"><option value="">— Tidak relevan (skip) —</option>'+options+'</select></div>';
+  }).join('');
+
+  const manualHtml = CATS_KARAKTER_MANUAL.map(cat => {
+    return '<div class="form-item"><label class="form-label">'+cat+' (level, manual)</label>'
+      + '<select class="form-select" id="ord-'+cat+'">'
+      + '<option value="">— Tidak relevan (skip) —</option>'
+      + '<option value="0">Level 0 — Belum Paham</option>'
+      + '<option value="1">Level 1</option>'
+      + '<option value="2">Level 2</option>'
+      + '<option value="3">Level 3</option>'
+      + '</select></div>';
+  }).join('');
+
+  document.getElementById('mainContent').innerHTML = `
+    <h2 class="section-title">Cek Kelayakan Operator</h2>
+    <p class="section-desc">Masukkan karakteristik order (yang relevan saja — kategori yang di-skip tidak ikut dihitung). Sistem akan mencari operator yang levelnya mencukupi, dan menandai operator paling "hemat skill" sebagai Optimal.</p>
+    <div class="form-card">
+      <div class="form-grid">${formHtml}${manualHtml}</div>
+      <div style="margin-top:14px;display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="runMatch()">Cek Kelayakan</button>
+        <button class="btn btn-ghost" onclick="renderCekKelayakan()">Reset Form</button>
+      </div>
+    </div>
+    <div id="matchResult"></div>
+  `;
+}
+
+function runMatch(){
+  const orderLevels = {};
+  CATS_NONKARAKTER.concat(CATS_KARAKTER_DROPDOWN).forEach(cat => {
+    const el = document.getElementById('ord-'+cat.replace(/\s/g,'_'));
+    const val = el.value;
+    if (!val) return;
+    orderLevels[cat] = CATS_NONKARAKTER.includes(cat) ? itemLevel(cat, val) : codeLevel(cat, val);
+    orderLevels['__label__'+cat] = val;
+  });
+  CATS_KARAKTER_MANUAL.forEach(cat => {
+    const el = document.getElementById('ord-'+cat);
+    const val = el.value;
+    if (val === '') return;
+    orderLevels[cat] = parseInt(val);
+    orderLevels['__label__'+cat] = 'Level '+val;
+  });
+
+  const relevantCats = ALL_CATS.filter(c => orderLevels[c] !== undefined);
+
+  if (relevantCats.length === 0){
+    document.getElementById('matchResult').innerHTML = '<div class="gap-alert"><div class="gap-alert-title">Belum ada kategori dipilih</div><div class="gap-alert-body">Pilih minimal 1 karakteristik order untuk mulai pencocokan.</div></div>';
+    return;
+  }
+
+  const evaluated = OPERATORS.map(op => {
+    const perCat = relevantCats.map(cat => {
+      const opLvl = operatorLevelFor(op, cat);
+      const reqLvl = orderLevels[cat];
+      return { cat, opLvl, reqLvl, ok: opLvl >= reqLvl, gap: Math.max(0, reqLvl - opLvl), opLabel: operatorLabelFor(op, cat) };
+    });
+    const layak = perCat.every(p => p.ok);
+    const score = perCat.reduce((s,p) => s + p.opLvl, 0);
+    const totalGap = perCat.reduce((s,p) => s + p.gap, 0);
+    return { op, perCat, layak, score, totalGap };
+  });
+
+  const layakList = evaluated.filter(e => e.layak);
+  const tidakList = evaluated.filter(e => !e.layak);
+  let optimalList = [];
+  if (layakList.length){
+    const minScore = Math.min(...layakList.map(e => e.score));
+    optimalList = layakList.filter(e => e.score === minScore);
+  }
+  const layakSajaList = layakList.filter(e => !optimalList.includes(e));
+
+  let gapRecommend = [];
+  if (layakList.length === 0){
+    const minGap = Math.min(...tidakList.map(e => e.totalGap));
+    gapRecommend = tidakList.filter(e => e.totalGap === minGap);
+    gapLog.push({ orderLevels, relevantCats, recommend: gapRecommend.map(e => e.op.nama), timestamp: new Date().toLocaleString('id-ID') });
+  }
+
+  lastMatch = { orderLevels, relevantCats, evaluated, optimalList, layakSajaList, tidakList, gapRecommend };
+
+  renderMatchResult();
+}
+
+function renderMatchResult(){
+  const { relevantCats, orderLevels, optimalList, layakSajaList, tidakList, gapRecommend } = lastMatch;
+
+  const opCard = (e, colorClass) => {
+    return '<div class="op-card" onclick="showExplain(\''+e.op.absen+'\')">'
+      + '<span class="op-name">'+e.op.nama+'</span>'
+      + '<div class="op-meta">No. Absen '+e.op.absen+' &middot; Total skor relevan: '+e.score+'</div>'
+      + '</div>';
+  };
+
+  const summaryHtml = `
+    <div class="stat-row">
+      <div class="stat-chip"><div class="stat-chip-label">KATEGORI DINILAI</div><div class="stat-chip-value">${relevantCats.length}</div></div>
+      <div class="stat-chip"><div class="stat-chip-label">OPTIMAL</div><div class="stat-chip-value">${optimalList.length}</div></div>
+      <div class="stat-chip"><div class="stat-chip-label">LAYAK (LAINNYA)</div><div class="stat-chip-value">${layakSajaList.length}</div></div>
+      <div class="stat-chip"><div class="stat-chip-label">TIDAK LAYAK</div><div class="stat-chip-value">${tidakList.length}</div></div>
+    </div>
+  `;
+
+  const gapHtml = (optimalList.length === 0 && layakSajaList.length === 0) ? `
+    <div class="gap-alert">
+      <div class="gap-alert-title">Tidak ada operator yang layak untuk order ini</div>
+      <div class="gap-alert-body">
+        Seluruh 40 operator berada di bawah level yang dibutuhkan order ini. Operator dengan gap (selisih) paling kecil — paling dekat untuk dikejar lewat training — direkomendasikan naik skill lebih dulu:<br><br>
+        ${gapRecommend.map(e => '<b>'+e.op.nama+'</b> (No. Absen '+e.op.absen+') — total gap '+e.totalGap+' level').join('<br>')}
+        <br><br>Rekomendasi ini juga otomatis tercatat di tab "Naik Skill".
+      </div>
+    </div>
+  ` : '';
+
+  const resultHtml = `
+    ${summaryHtml}
+    <div class="result-grid">
+      <div class="result-col col-optimal">
+        <div class="result-col-title">✅ Optimal <span class="mono" style="font-size:10px;opacity:.7">(${optimalList.length})</span></div>
+        <div class="result-col-desc">Level paling pas/hemat — layak, dan levelnya paling mendekati kebutuhan order (tidak "membuang" operator berlevel tinggi untuk order yang levelnya rendah)</div>
+        ${optimalList.length ? optimalList.map(e=>opCard(e)).join('') : '<div class="empty-note">Tidak ada</div>'}
+      </div>
+      <div class="result-col col-layak">
+        <div class="result-col-title">✔️ Bisa / Layak <span class="mono" style="font-size:10px;opacity:.7">(${layakSajaList.length})</span></div>
+        <div class="result-col-desc">Memenuhi semua kategori yang relevan, tapi levelnya melebihi kebutuhan order (masih bisa dipakai, tapi bukan pilihan paling efisien)</div>
+        ${layakSajaList.length ? layakSajaList.map(e=>opCard(e)).join('') : '<div class="empty-note">Tidak ada</div>'}
+      </div>
+    </div>
+    ${gapHtml}
+    <div id="explainPanel"></div>
+  `;
+  document.getElementById('matchResult').innerHTML = resultHtml;
+}
+
+function showExplain(absen){
+  if (!lastMatch) return;
+  const e = lastMatch.evaluated.find(x => x.op.absen === absen);
+  if (!e) return;
+  const lines = e.perCat.map(p => {
+    const status = p.ok ? 'Memenuhi (lebih/sama, selisih +'+(p.opLvl-p.reqLvl)+')' : 'KURANG '+p.gap+' level';
+    return '• '+p.cat+' — order butuh level '+p.reqLvl+', operator level '+p.opLvl+' ('+p.opLabel+') → '+status;
+  }).join('\n');
+  const verdict = e.layak ? (lastMatch.optimalList.includes(e) ? 'OPTIMAL — layak dan paling hemat skill' : 'LAYAK — memenuhi syarat, tapi levelnya di atas yang dibutuhkan') : 'TIDAK LAYAK';
+  document.getElementById('explainPanel').innerHTML = `
+    <div class="explain-panel">
+      <div class="explain-title"><span>Penjelasan — ${e.op.nama} (${e.op.absen})</span><button class="explain-close" onclick="document.getElementById('explainPanel').innerHTML=''">&#10005;</button></div>
+      <b>Status: ${verdict}</b>\n\n${lines}
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════════
+// TAB 2 — REKOMENDASI NAIK SKILL
+// ══════════════════════════════════════════════════════════
+function renderRekomendasi(){
+  // 1. Belum Paham (level 0 di kategori manapun)
+  const belumPaham = [];
+  OPERATORS.forEach(op => {
+    ALL_CATS.forEach(cat => {
+      const lvl = operatorLevelFor(op, cat);
+      if (lvl === 0) belumPaham.push({ nama: op.nama, absen: op.absen, cat });
+    });
+  });
+
+  // 2. Di bawah rata-rata per kategori
+  const avgByCat = {};
+  ALL_CATS.forEach(cat => {
+    const vals = OPERATORS.map(op => operatorLevelFor(op, cat));
+    avgByCat[cat] = vals.reduce((a,b)=>a+b,0) / vals.length;
+  });
+  const dibawahRata = [];
+  OPERATORS.forEach(op => {
+    ALL_CATS.forEach(cat => {
+      const lvl = operatorLevelFor(op, cat);
+      if (lvl < avgByCat[cat]) dibawahRata.push({ nama: op.nama, absen: op.absen, cat, lvl, avg: avgByCat[cat].toFixed(2) });
+    });
+  });
+
+  // Hitung siapa yang overlap di >1 kriteria (untuk badge prioritas)
+  const countByName = {};
+  const nameSet1 = new Set(belumPaham.map(x=>x.nama));
+  const nameSet2 = new Set(dibawahRata.map(x=>x.nama));
+  const nameSet3 = new Set(gapLog.flatMap(g=>g.recommend));
+  [...nameSet1, ...nameSet2, ...nameSet3].forEach(n => { countByName[n] = (countByName[n]||0)+ (nameSet1.has(n)?1:0) + (nameSet2.has(n)?1:0) + (nameSet3.has(n)?1:0); });
+  const priorityBadge = (nama) => countByName[nama] > 1 ? '<span class="badge-priority">Prioritas Tinggi</span>' : '';
+
+  const belumPahamGrouped = {};
+  belumPaham.forEach(x => { belumPahamGrouped[x.cat] = belumPahamGrouped[x.cat] || []; belumPahamGrouped[x.cat].push(x); });
+
+  const dibawahRataGrouped = {};
+  dibawahRata.forEach(x => { dibawahRataGrouped[x.cat] = dibawahRataGrouped[x.cat] || []; dibawahRataGrouped[x.cat].push(x); });
+
+  const belumPahamHtml = Object.keys(belumPahamGrouped).length ? Object.entries(belumPahamGrouped).map(([cat, items]) =>
+    '<div style="margin-bottom:10px"><div style="font-size:10.5px;color:var(--text-3);font-weight:600;margin-bottom:4px">'+cat+' ('+items.length+' operator)</div>'
+    + items.map(x => '<div class="rec-item"><b>'+x.nama+'</b> — No. Absen '+x.absen+priorityBadge(x.nama)+'</div>').join('')
+    + '</div>'
+  ).join('') : '<div class="empty-note">Tidak ada operator dengan level 0 / belum paham di kategori manapun</div>';
+
+  const dibawahRataHtml = Object.keys(dibawahRataGrouped).length ? Object.entries(dibawahRataGrouped).map(([cat, items]) =>
+    '<div style="margin-bottom:10px"><div style="font-size:10.5px;color:var(--text-3);font-weight:600;margin-bottom:4px">'+cat+' (rata-rata: '+avgByCat[cat].toFixed(2)+')</div>'
+    + items.map(x => '<div class="rec-item"><b>'+x.nama+'</b> — level '+x.lvl+' (di bawah rata-rata '+x.avg+')'+priorityBadge(x.nama)+'</div>').join('')
+    + '</div>'
+  ).join('') : '<div class="empty-note">Semua operator di atas atau sama dengan rata-rata</div>';
+
+  const gapHtml = gapLog.length ? gapLog.slice().reverse().map(g =>
+    '<div class="rec-item" style="margin-bottom:8px">'
+    + '<div style="color:var(--text-4);font-size:9.5px;margin-bottom:3px">'+g.timestamp+' &middot; kategori order: '+g.relevantCats.join(', ')+'</div>'
+    + 'Rekomendasi: '+g.recommend.map(n => '<b>'+n+'</b>'+priorityBadge(n)).join(', ')
+    + '</div>'
+  ).join('') : '<div class="empty-note">Belum ada order yang gagal total (semua order yang dicek di tab "Cek Kelayakan" sejauh ini masih punya minimal 1 operator layak)</div>';
+
+  document.getElementById('mainContent').innerHTML = `
+    <h2 class="section-title">Rekomendasi Kenaikan Skill</h2>
+    <p class="section-desc">Tiga kriteria prioritas kenaikan skill. Operator yang masuk lebih dari 1 kriteria ditandai <span class="badge-priority" style="margin-left:0">Prioritas Tinggi</span>.</p>
+    <div class="rec-grid">
+      <div class="rec-card">
+        <div class="rec-card-title">1. Belum Paham</div>
+        <div class="rec-card-desc">Operator dengan level 0 ("Belum Paham") di kategori manapun — bottleneck utama, prioritas training pertama.</div>
+        ${belumPahamHtml}
+      </div>
+      <div class="rec-card">
+        <div class="rec-card-title">2. Di Bawah Rata-rata</div>
+        <div class="rec-card-desc">Operator yang levelnya di bawah rata-rata tim (40 operator) untuk kategori tersebut.</div>
+        ${dibawahRataHtml}
+      </div>
+      <div class="rec-card">
+        <div class="rec-card-title">3. Gap Order (Sesi Ini)</div>
+        <div class="rec-card-desc">Riwayat order yang dicek di tab "Cek Kelayakan" namun tidak ada 1 pun operator layak — direkomendasikan operator dengan gap terkecil.</div>
+        ${gapHtml}
+      </div>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════════
+// TAB 3 — DATA OPERATOR
+// ══════════════════════════════════════════════════════════
+function renderDataOperator(){
+  const rows = OPERATORS.map((op, idx) => `
+    <tr>
+      <td class="name-cell">${op.nama}</td>
+      <td>${op.absen}</td>
+      ${CATS_NONKARAKTER.map(cat => `<td class="editable" ondblclick="editCell(this, ${idx}, '${cat}', 'number')">${op[cat]}</td>`).join('')}
+      <td class="editable" ondblclick="editCell(this, ${idx}, 'size', 'select', 'Size')">${op.size}</td>
+      <td class="editable" ondblclick="editCell(this, ${idx}, 'grade', 'select', 'Grade')">${op.grade}</td>
+      <td class="editable" ondblclick="editCell(this, ${idx}, 'softness', 'select', 'Softness')">${op.softness}</td>
+      <td class="editable" ondblclick="editCell(this, ${idx}, 'thickness', 'select', 'Thickness')">${op.thickness}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('mainContent').innerHTML = `
+    <h2 class="section-title">Data Operator</h2>
+    <p class="section-desc">40 operator dengan 10 level skill. Klik dua kali (double-click) pada sel untuk mengedit — perubahan tersimpan untuk sesi ini (belum ke penyimpanan permanen, karena data masih ditanam langsung / hardcode).</p>
+    <div class="op-table-wrap">
+      <table class="op-table">
+        <thead><tr>
+          <th>Nama</th><th>No. Absen</th>
+          ${CATS_NONKARAKTER.map(c=>'<th>'+c+'</th>').join('')}
+          <th>Size</th><th>Grade</th><th>Softness</th><th>Thickness</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function editCell(td, idx, field, type, refCat){
+  const oldVal = OPERATORS[idx][field];
+  let inputHtml;
+  if (type === 'number'){
+    inputHtml = '<input class="cell-edit" type="number" min="0" value="'+oldVal+'">';
+  } else {
+    const opts = KARAKTER[refCat].map(x => '<option value="'+x.code+'" '+(x.code===oldVal?'selected':'')+'>'+x.code+'</option>').join('');
+    inputHtml = '<select class="cell-edit">'+opts+'</select>';
+  }
+  td.innerHTML = inputHtml;
+  const input = td.querySelector('.cell-edit');
+  input.focus();
+  const commit = () => {
+    const val = type === 'number' ? parseInt(input.value)||0 : input.value;
+    OPERATORS[idx][field] = val;
+    renderDataOperator();
+  };
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') commit(); });
+}
+
+// ══════════════════════════════════════════════════════════
+// TAB 4 — PANDUAN
+// ══════════════════════════════════════════════════════════
+function renderPanduan(){
+  const nonKarakterHtml = CATS_NONKARAKTER.map(cat => `
+    <div class="guide-section">
+      <div class="guide-title">${cat}</div>
+      <table class="guide-table">
+        <thead><tr><th>Item</th><th>Level</th><th>Keterangan</th></tr></thead>
+        <tbody>${NON_KARAKTER[cat].map(x => '<tr><td class="code">'+x.item+'</td><td class="lvl">'+x.level+'</td><td>'+x.ket+'</td></tr>').join('')}</tbody>
+      </table>
+    </div>
+  `).join('');
+
+  const karakterHtml = ['Softness','Thickness','Grade','Size'].map(cat => `
+    <div class="guide-section">
+      <div class="guide-title">${cat}</div>
+      <table class="guide-table">
+        <thead><tr><th>Kode</th><th>Level</th><th>Keterangan</th></tr></thead>
+        <tbody>${KARAKTER[cat].map(x => '<tr><td class="code">'+x.code+'</td><td class="lvl">'+x.level+'</td><td>'+x.ket+'</td></tr>').join('')}</tbody>
+      </table>
+    </div>
+  `).join('');
+
+  document.getElementById('mainContent').innerHTML = `
+    <h2 class="section-title">Panduan &amp; Referensi Level</h2>
+    <p class="section-desc">Penjelasan lengkap arti setiap level di 10 kategori skill, supaya siapa pun yang memakai dashboard ini paham dasar penilaiannya tanpa perlu membuka file Excel sumber.</p>
+    ${nonKarakterHtml}
+    ${karakterHtml}
+  `;
+}
+
+// ══════════════════════════════════════════════════════════
+// CHAT (rule-based, client-side — tanpa backend/API eksternal)
+// ══════════════════════════════════════════════════════════
+let chatOpen = false;
+function toggleChat(){
+  chatOpen = !chatOpen;
+  document.getElementById('chatRoom').style.display = chatOpen ? 'block' : 'none';
+  document.getElementById('chatOpenLabel').innerHTML = chatOpen ? 'Tutup &#9652;' : 'Buka &#9662;';
+}
+function appendMsg(text, isUser){
+  const log = document.getElementById('chatLog');
+  const div = document.createElement('div');
+  if (isUser){ div.className = 'msg-user'; div.textContent = text; }
+  else { div.innerHTML = '<div class="msg-bot-avatar">L</div><div class="msg-bot-bubble"></div>'; div.className='msg-bot'; div.querySelector('.msg-bot-bubble').textContent = text; }
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+function askSuggested(text){
+  if (!chatOpen) toggleChat();
+  document.getElementById('chatInput').value = text;
+  sendChat();
+}
+function sendChat(){
+  const input = document.getElementById('chatInput');
+  const q = input.value.trim();
+  if (!q) return;
+  appendMsg(q, true);
+  input.value = '';
+  appendMsg(answerChat(q), false);
+}
+function answerChat(q){
+  const ql = q.toLowerCase();
+
+  if (!lastMatch){
+    if (ql.includes('naik skill') || ql.includes('rekomendasi')){
+      return 'Buka tab "Naik Skill" di sidebar untuk melihat 3 daftar prioritas: Belum Paham, Di Bawah Rata-rata, dan Gap Order.';
+    }
+    return 'Belum ada order yang dicek di tab "Cek Kelayakan". Jalankan pengecekan dulu, baru saya bisa jelaskan operator mana yang cocok/tidak dan kenapa.';
+  }
+
+  const foundOp = OPERATORS.find(op => ql.includes(op.nama.toLowerCase()));
+  if (foundOp){
+    const e = lastMatch.evaluated.find(x => x.op.absen === foundOp.absen);
+    const lines = e.perCat.map(p => p.cat+': order butuh level '+p.reqLvl+', operator level '+p.opLvl+' ('+p.opLabel+') — '+(p.ok?'memenuhi':'kurang '+p.gap+' level')).join('. ');
+    const verdict = e.layak ? (lastMatch.optimalList.includes(e) ? 'OPTIMAL (layak & paling hemat skill)' : 'LAYAK, tapi bukan pilihan paling optimal') : 'TIDAK LAYAK';
+    return foundOp.nama+' berstatus '+verdict+' untuk order ini.\n'+lines;
+  }
+
+  if (ql.includes('optimal')){
+    if (!lastMatch.optimalList.length) return 'Tidak ada operator optimal untuk order terakhir — semua operator berada di bawah level yang dibutuhkan.';
+    return 'Operator optimal untuk order terakhir: '+lastMatch.optimalList.map(e=>e.op.nama).join(', ')+'.';
+  }
+  if (ql.includes('layak') || ql.includes('cocok') || ql.includes('bisa')){
+    const all = [...lastMatch.optimalList, ...lastMatch.layakSajaList].map(e=>e.op.nama);
+    if (!all.length) return 'Tidak ada operator yang layak untuk order terakhir.';
+    return 'Operator yang layak untuk order terakhir: '+all.join(', ')+'.';
+  }
+  if (ql.includes('naik skill') || ql.includes('rekomendasi') || ql.includes('perlu')){
+    return 'Buka tab "Naik Skill" untuk daftar lengkap. Ringkasnya: prioritaskan operator dengan level "Belum Paham" (level 0) di kategori manapun, lalu yang di bawah rata-rata tim.';
+  }
+  return 'Saya bisa jawab soal status operator tertentu (sebut namanya), daftar operator optimal/layak dari order terakhir, atau rekomendasi kenaikan skill. Coba tanya ulang dengan menyebut nama operator atau kata "optimal"/"layak"/"naik skill".';
+}
+
+// ─── INIT ───────────────────────────────────────────────────
+renderTab();
+</script>
+</body>
+</html>
