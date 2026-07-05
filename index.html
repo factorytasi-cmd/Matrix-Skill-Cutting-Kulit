@@ -370,7 +370,7 @@ function operatorLabelFor(op, cat){
 // Keduanya independen dari form order, dianalisa dari level Texture &
 // Consumption operator. Tambahkan aturan baru di sini seiring kategori
 // lain dibahas.
-function computeWeaknesses(op, texturePerCat){
+function computeWeaknesses(op, texturePerCat, status){
   const notes = [];
   if (op.Consumption === 1){
     notes.push('Consumption material operator ini boros (level 1) — perlu diawasi saat cutting untuk order ini.');
@@ -378,14 +378,20 @@ function computeWeaknesses(op, texturePerCat){
   if (texturePerCat && texturePerCat.ok && texturePerCat.buffer === 0){
     notes.push('Level Texture operator pas-pasan dengan kebutuhan order ini (tanpa margin) — berisiko kalau ada variasi kualitas kulit.');
   }
+  if (status === 'optimal' || status === 'overskill'){
+    const softLvl = codeLevel('Softness', op.softness);
+    if (softLvl === 3) notes.push('Mampu memotong kulit S1, S2, maupun S3 (level Softness tertinggi).');
+    else if (softLvl === 2) notes.push('Hanya mampu memotong kulit S2 dan S3 — belum sanggup untuk kulit S1.');
+    else if (softLvl === 1) notes.push('Hanya mampu memotong kulit S3 — belum sanggup untuk kulit S1 maupun S2.');
+    else notes.push('Belum paham Softness sama sekali — berisiko kalau dipakai untuk kulit S1, S2, maupun S3.');
+  }
   return notes;
 }
 function computeNeedUpgrading(op){
   const notes = [];
   const maxTextureLevel = Math.max(...NON_KARAKTER['Texture'].map(x => x.level));
   if (op.Texture < maxTextureLevel){
-    const toughest = NON_KARAKTER['Texture'].filter(x => x.level === maxTextureLevel).map(x => x.item).join(', ');
-    notes.push('Texture operator masih level '+op.Texture+' dari maksimal '+maxTextureLevel+' — perlu ditingkatkan supaya sanggup menangani cacat level tinggi seperti '+toughest+' untuk order-order berikutnya.');
+    notes.push('Texture: level '+op.Texture+'/'+maxTextureLevel);
   }
   return notes;
 }
@@ -563,10 +569,7 @@ function runMatch(){
     const totalGap = perCat.reduce((s,p) => s + p.gap, 0);
     const narratives = {};
     relevantCats.forEach(cat => { narratives[cat] = narrativeFor(cat, op, reqInfo[cat]); });
-    const texturePerCat = perCat.find(p => p.cat === 'Texture');
-    const weaknesses = computeWeaknesses(op, texturePerCat);
-    const needUpgrading = computeNeedUpgrading(op);
-    return { op, perCat, layak, score, totalGap, narratives, weaknesses, needUpgrading };
+    return { op, perCat, layak, score, totalGap, narratives };
   });
 
   const layakList = results.filter(r => r.layak);
@@ -581,6 +584,9 @@ function runMatch(){
     } else {
       r.status = r.totalGap <= 2 ? 'berpotensi' : 'tidak';
     }
+    const texturePerCat = r.perCat.find(p => p.cat === 'Texture');
+    r.weaknesses = computeWeaknesses(r.op, texturePerCat, r.status);
+    r.needUpgrading = computeNeedUpgrading(r.op);
   });
 
   let gapRecommend = [];
@@ -635,7 +641,7 @@ function renderMatchResult(){
     const meta = STATUS_META[r.status];
     const catCells = relevantCats.map(cat => '<td>'+r.narratives[cat]+'</td>').join('');
     const weaknessCell = '<td>'+(r.weaknesses.length ? '⚠️ '+r.weaknesses.join('<br>⚠️ ') : '—')+'</td>';
-    const needUpgradingCell = '<td>'+(r.needUpgrading.length ? '📈 '+r.needUpgrading.join('<br>📈 ') : '—')+'</td>';
+    const needUpgradingCell = '<td>'+(r.needUpgrading.length ? '• '+r.needUpgrading.join('<br>• ') : '—')+'</td>';
     return '<tr class="'+meta.rowClass+'">'
       + '<td class="name-cell">'+r.op.nama+'</td>'
       + '<td>'+r.op.absen+'</td>'
