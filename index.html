@@ -270,8 +270,14 @@ async function fetchSheetRows(sheetName){
 }
 function buildNonKarakter(rows){
   const result = {};
+  const header = (rows[0] || []).map(h => (h || '').trim().toUpperCase());
+  const iPoint = header.indexOf('POINT PEMAHAMAN');
+  const iItem = header.indexOf('KETERANGAN MEMAHAMI');
+  const iLevel = header.indexOf('LEVEL ANALISA');
+  const iKet = header.indexOf('KETERANGAN LEVEL ANALISA');
   for (let i = 1; i < rows.length; i++){
-    const [point, levelKar, item, level, ket] = rows[i];
+    const row = rows[i];
+    const point = row[iPoint], item = row[iItem], level = row[iLevel], ket = row[iKet];
     if (!point || !item) continue;
     if (!result[point]) result[point] = [];
     result[point].push({ item, level: parseInt(level) || 0, ket: ket || '' });
@@ -282,11 +288,15 @@ function buildKarakter(rows){
   const cols = ['Softness','Thickness','Grade','Size'];
   const result = { Softness: [], Thickness: [], Grade: [], Size: [] };
   const seen = { Softness: new Set(), Thickness: new Set(), Grade: new Set(), Size: new Set() };
+  const header = (rows[0] || []).map(h => (h || '').trim());
+  const colIdx = {};
+  cols.forEach(c => { colIdx[c] = header.indexOf(c); }); // Level & Keterangan diasumsikan tepat 1-2 kolom setelahnya
   for (let i = 1; i < rows.length; i++){
     const row = rows[i];
-    const groups = [[row[0],row[1],row[2]], [row[3],row[4],row[5]], [row[6],row[7],row[8]], [row[9],row[10],row[11]]];
-    cols.forEach((c, idx) => {
-      const [code, lvl, ket] = groups[idx];
+    cols.forEach(c => {
+      const base = colIdx[c];
+      if (base === -1) return;
+      const code = row[base], lvl = row[base+1], ket = row[base+2];
       if (code === undefined || code === '' || lvl === undefined || lvl === '') return;
       if (seen[c].has(code)) return;
       seen[c].add(code);
@@ -296,16 +306,22 @@ function buildKarakter(rows){
   return result;
 }
 function buildOperators(rows){
+  const header = (rows[0] || []).map(h => (h || '').trim());
+  const idx = (name) => header.indexOf(name);
+  const iNama = idx('Nama'), iAbsen = idx('No. Absen'), iTexture = idx('Texture'),
+        iConsumption = idx('Consumption'), iMetode = idx('Metode'), iSerat = idx('Serat Kulit'),
+        iPcs = idx('Pcs Warna'), iPair = idx('Pair Warna'), iSize = idx('Size'),
+        iGrade = idx('Grade'), iSoftness = idx('Softness'), iThickness = idx('Thickness');
   const result = [];
   for (let i = 1; i < rows.length; i++){
     const row = rows[i];
-    const nama = row[0];
+    const nama = row[iNama];
     if (!nama) continue;
     result.push({
-      nama, absen: row[1],
-      Texture: parseInt(row[3]) || 0, Consumption: parseInt(row[4]) || 0, Metode: parseInt(row[5]) || 0,
-      'Serat Kulit': parseInt(row[6]) || 0, 'Pcs Warna': parseInt(row[7]) || 0, 'Pair Warna': parseInt(row[8]) || 0,
-      size: row[9], grade: row[10], softness: row[11], thickness: row[12]
+      nama, absen: row[iAbsen],
+      Texture: parseInt(row[iTexture]) || 0, Consumption: parseInt(row[iConsumption]) || 0, Metode: parseInt(row[iMetode]) || 0,
+      'Serat Kulit': parseInt(row[iSerat]) || 0, 'Pcs Warna': parseInt(row[iPcs]) || 0, 'Pair Warna': parseInt(row[iPair]) || 0,
+      size: row[iSize], grade: row[iGrade], softness: row[iSoftness], thickness: row[iThickness]
     });
   }
   return result;
@@ -437,14 +453,25 @@ function computeNeedUpgrading(perCat, reqInfo){
   return points;
 }
 
-function computeWeaknesses(op, texturePerCat, status, reqInfo){
+function computeWeaknesses(op, perCat, status, reqInfo){
   const notes = [];
+
   if (op.Consumption === 1){
     notes.push({ text: 'Consumption material operator ini boros (level 1) — perlu diawasi saat cutting untuk order ini.', positive: false });
   }
-  if (texturePerCat && texturePerCat.ok && texturePerCat.buffer === 0){
-    notes.push({ text: 'Level Texture operator pas-pasan dengan kebutuhan order ini (tanpa margin) — berisiko kalau ada variasi kualitas kulit.', positive: false });
-  }
+
+  // Analisa "pas-pasan" (buffer 0) — generik untuk kategori manapun yang
+  // relevan di order ini. Pair Warna dapat nada lebih tegas karena tersulit.
+  const MEPET_CHECK_CATS = ['Texture', 'Pcs Warna', 'Pair Warna', 'Serat Kulit'];
+  perCat.forEach(p => {
+    if (!MEPET_CHECK_CATS.includes(p.cat) || !p.ok || p.buffer !== 0) return;
+    if (p.cat === 'Pair Warna'){
+      notes.push({ text: 'Level Pair Warna operator pas-pasan dengan kebutuhan order ini — Pair Warna termasuk kategori tersulit karena warna harus konsisten pada sepasang produk, risiko tinggi kalau ada variasi.', positive: false });
+    } else {
+      notes.push({ text: 'Level '+displayLabel(p.cat)+' operator pas-pasan dengan kebutuhan order ini (tanpa margin) — perlu diawasi.', positive: false });
+    }
+  });
+
   if (status === 'optimal' || status === 'overskill'){
     const opGradeLvl = codeLevel('Grade', op.grade);
     const gradeReq = reqInfo && reqInfo['Grade'];
@@ -568,11 +595,39 @@ function renderCekKelayakan(reset){
     </div>
   `;
 
+  const warnaHtml = `
+    <div class="form-item">
+      <label class="form-label">Jenis Kebutuhan Warna</label>
+      <select class="form-select" id="ord-warnaJenis" onchange="updateWarnaDetailOptions()">
+        <option value="">— Tidak relevan (skip) —</option>
+        <option value="Pcs Warna">Pcs Warna</option>
+        <option value="Pair Warna">Pair Warna (lebih sulit)</option>
+      </select>
+    </div>
+    <div class="form-item">
+      <label class="form-label">Detail Level Warna</label>
+      <select class="form-select" id="ord-warnaDetail" disabled>
+        <option value="">— Pilih jenis dulu —</option>
+      </select>
+    </div>
+  `;
+
+  const seratOptions = NON_KARAKTER['Serat Kulit'].map(x => '<option value="'+x.item+'">'+x.item+' (level '+x.level+')</option>').join('');
+  const seratHtml = `
+    <div class="form-item">
+      <label class="form-label">Serat Kulit</label>
+      <select class="form-select" id="ord-Serat_Kulit">
+        <option value="">— Tidak relevan (skip) —</option>
+        ${seratOptions}
+      </select>
+    </div>
+  `;
+
   document.getElementById('mainContent').innerHTML = `
     <h2 class="section-title">Cek Kelayakan Operator</h2>
-    <p class="section-desc">Tahap ini: kategori <b>Texture</b>, <b>Grade</b>, <b>Size</b>, dan <b>Pola</b>. Kategori lain menyusul satu per satu setelah kita bahas logicnya masing-masing.</p>
+    <p class="section-desc">Tahap ini: kategori <b>Texture</b>, <b>Grade</b>, <b>Size</b>, <b>Pola</b>, <b>Warna</b> (Pcs/Pair — pilih salah satu), dan <b>Serat Kulit</b>. Kategori lain menyusul satu per satu setelah kita bahas logicnya masing-masing.</p>
     <div class="form-card">
-      <div class="form-grid">${textureHtml}${gradeHtml}${sizeHtml}${polaHtml}</div>
+      <div class="form-grid">${textureHtml}${gradeHtml}${sizeHtml}${polaHtml}${warnaHtml}${seratHtml}</div>
       <div style="margin-top:14px;display:flex;gap:8px">
         <button class="btn btn-primary" onclick="runMatch()">Cek Kelayakan</button>
         <button class="btn btn-ghost" onclick="renderCekKelayakan(true)">Reset Form</button>
@@ -581,6 +636,19 @@ function renderCekKelayakan(reset){
     <div id="matchResult"></div>
   `;
   if (lastMatch) renderMatchResult();
+}
+
+function updateWarnaDetailOptions(){
+  const jenis = document.getElementById('ord-warnaJenis').value;
+  const detailSelect = document.getElementById('ord-warnaDetail');
+  if (!jenis){
+    detailSelect.innerHTML = '<option value="">— Pilih jenis dulu —</option>';
+    detailSelect.disabled = true;
+    return;
+  }
+  const items = NON_KARAKTER[jenis];
+  detailSelect.innerHTML = '<option value="">— Pilih level —</option>' + items.map(x => '<option value="'+x.item+'">'+x.item+' (level '+x.level+')</option>').join('');
+  detailSelect.disabled = false;
 }
 
 // ─── NARRATIVE GENERATORS ───────────────────────────────────
@@ -667,7 +735,20 @@ function runMatch(){
     reqInfo['Metode'] = { level: itemLevel('Metode', polaVal), label: polaVal };
   }
 
-  // Kategori lain (Consumption, Serat Kulit, Pcs Warna, Pair Warna,
+  // Warna: Pcs Warna / Pair Warna (aktif, saling eksklusif)
+  const warnaJenis = document.getElementById('ord-warnaJenis').value;
+  const warnaDetail = document.getElementById('ord-warnaDetail').value;
+  if (warnaJenis && warnaDetail){
+    reqInfo[warnaJenis] = { level: itemLevel(warnaJenis, warnaDetail), label: warnaDetail };
+  }
+
+  // Serat Kulit (aktif)
+  const seratVal = document.getElementById('ord-Serat_Kulit').value;
+  if (seratVal){
+    reqInfo['Serat Kulit'] = { level: itemLevel('Serat Kulit', seratVal), label: seratVal };
+  }
+
+  // Kategori lain (Consumption,
   // Softness, Thickness) belum ada di form — akan diaktifkan
   // kembali satu per satu. Uncomment blok di bawah saat gilirannya tiba:
   //
@@ -714,8 +795,7 @@ function runMatch(){
     } else {
       r.status = r.totalGap <= 2 ? 'berpotensi' : 'tidak';
     }
-    const texturePerCat = r.perCat.find(p => p.cat === 'Texture');
-    r.weaknesses = computeWeaknesses(r.op, texturePerCat, r.status, reqInfo);
+    r.weaknesses = computeWeaknesses(r.op, r.perCat, r.status, reqInfo);
     r.needUpgrading = computeNeedUpgrading(r.perCat, reqInfo);
   });
 
