@@ -370,7 +370,7 @@ function operatorLabelFor(op, cat){
 // Keduanya independen dari form order, dianalisa dari level Texture &
 // Consumption operator. Tambahkan aturan baru di sini seiring kategori
 // lain dibahas.
-function computeWeaknesses(op, texturePerCat, status){
+function computeWeaknesses(op, texturePerCat, status, reqInfo){
   const notes = [];
   if (op.Consumption === 1){
     notes.push('Consumption material operator ini boros (level 1) — perlu diawasi saat cutting untuk order ini.');
@@ -379,10 +379,26 @@ function computeWeaknesses(op, texturePerCat, status){
     notes.push('Level Texture operator pas-pasan dengan kebutuhan order ini (tanpa margin) — berisiko kalau ada variasi kualitas kulit.');
   }
   if (status === 'optimal' || status === 'overskill'){
-    const softLvl = codeLevel('Softness', op.softness);
-    if (softLvl === 3) notes.push('Mampu memotong kulit S1, S2, maupun S3 (level Softness tertinggi).');
-    else if (softLvl === 2) notes.push('Hanya mampu memotong kulit S2 dan S3 — belum sanggup untuk kulit S1.');
-    else if (softLvl === 1) notes.push('Hanya mampu memotong kulit S3 — belum sanggup untuk kulit S1 maupun S2.');
+    const opGradeLvl = codeLevel('Grade', op.grade);
+    const opSoftLvl = codeLevel('Softness', op.softness);
+    const gradeReq = reqInfo && reqInfo['Grade'];
+    if (gradeReq){
+      // Analisa gabungan: kapasitas Softness operator tergantung Grade order ini.
+      // Contoh: sanggup S1 di Grade BC belum tentu sanggup S1 di Grade AB.
+      const combined = opGradeLvl + opSoftLvl;
+      const tiers = [ { code: 'S1', level: 3 }, { code: 'S2', level: 2 }, { code: 'S3', level: 1 } ];
+      const mampu = tiers.filter(t => combined >= gradeReq.level + t.level).map(t => t.code);
+      const belum = tiers.filter(t => combined < gradeReq.level + t.level).map(t => t.code);
+      if (mampu.length === 3){
+        notes.push('Untuk Grade '+gradeReq.label+', operator mampu memotong kulit S1, S2, maupun S3.');
+      } else if (mampu.length === 0){
+        notes.push('Untuk Grade '+gradeReq.label+', operator belum mampu memotong kulit S1, S2, maupun S3 — kombinasi Grade dan Softness-nya masih kurang.');
+      } else {
+        notes.push('Untuk Grade '+gradeReq.label+', operator mampu memotong kulit '+mampu.join(', ')+' — namun belum mampu untuk '+belum.join(', ')+'.');
+      }
+    } else if (opSoftLvl === 3) notes.push('Mampu memotong kulit S1, S2, maupun S3 (level Softness tertinggi).');
+    else if (opSoftLvl === 2) notes.push('Hanya mampu memotong kulit S2 dan S3 — belum sanggup untuk kulit S1.');
+    else if (opSoftLvl === 1) notes.push('Hanya mampu memotong kulit S3 — belum sanggup untuk kulit S1 maupun S2.');
     else notes.push('Belum paham Softness sama sekali — berisiko kalau dipakai untuk kulit S1, S2, maupun S3.');
   }
   return notes;
@@ -459,11 +475,22 @@ function renderCekKelayakan(reset){
     </div>
   `;
 
+  const gradeOptions = KARAKTER['Grade'].filter(x => !x.code.includes('Belum Paham')).map(x => '<option value="'+x.code+'">'+x.code+'</option>').join('');
+  const gradeHtml = `
+    <div class="form-item">
+      <label class="form-label">Grade</label>
+      <select class="form-select" id="ord-Grade">
+        <option value="">— Tidak relevan (skip) —</option>
+        ${gradeOptions}
+      </select>
+    </div>
+  `;
+
   document.getElementById('mainContent').innerHTML = `
     <h2 class="section-title">Cek Kelayakan Operator</h2>
-    <p class="section-desc">Tahap 1: kategori <b>Texture</b> saja dulu. Kategori lain menyusul satu per satu setelah kita bahas logicnya masing-masing.</p>
+    <p class="section-desc">Tahap ini: kategori <b>Texture</b> dan <b>Grade</b>. Kategori lain menyusul satu per satu setelah kita bahas logicnya masing-masing.</p>
     <div class="form-card">
-      <div class="form-grid">${textureHtml}</div>
+      <div class="form-grid">${textureHtml}${gradeHtml}</div>
       <div style="margin-top:14px;display:flex;gap:8px">
         <button class="btn btn-primary" onclick="runMatch()">Cek Kelayakan</button>
         <button class="btn btn-ghost" onclick="renderCekKelayakan(true)">Reset Form</button>
@@ -532,19 +559,20 @@ function runMatch(){
     reqInfo['Texture'] = { level: Math.max(...wajibItems.map(i=>i.level)), wajibItems, label: 'wajib bebas dari '+wajibItems.length+' jenis cacat' };
   }
 
+  // Grade (aktif)
+  const gradeVal = document.getElementById('ord-Grade').value;
+  if (gradeVal){
+    reqInfo['Grade'] = { level: codeLevel('Grade', gradeVal), label: gradeVal };
+  }
+
   // Kategori lain (Consumption, Metode, Serat Kulit, Pcs Warna, Pair Warna,
-  // Grade, Size, Softness, Thickness) belum ada di form — akan diaktifkan
+  // Size, Softness, Thickness) belum ada di form — akan diaktifkan
   // kembali satu per satu. Uncomment blok di bawah saat gilirannya tiba:
   //
   // GENERIC_DROPDOWN_CATS.forEach(cat => {
   //   const val = document.getElementById('ord-'+cat.replace(/\s/g,'_')).value;
   //   if (!val) return;
   //   reqInfo[cat] = { level: itemLevel(cat, val), label: val };
-  // });
-  // CATS_KARAKTER_DROPDOWN.forEach(cat => {
-  //   const val = document.getElementById('ord-'+cat.replace(/\s/g,'_')).value;
-  //   if (!val) return;
-  //   reqInfo[cat] = { level: codeLevel(cat, val), label: val };
   // });
   // CATS_KARAKTER_MANUAL.forEach(cat => {
   //   const val = document.getElementById('ord-'+cat).value;
@@ -585,7 +613,7 @@ function runMatch(){
       r.status = r.totalGap <= 2 ? 'berpotensi' : 'tidak';
     }
     const texturePerCat = r.perCat.find(p => p.cat === 'Texture');
-    r.weaknesses = computeWeaknesses(r.op, texturePerCat, r.status);
+    r.weaknesses = computeWeaknesses(r.op, texturePerCat, r.status, reqInfo);
     r.needUpgrading = computeNeedUpgrading(r.op);
   });
 
