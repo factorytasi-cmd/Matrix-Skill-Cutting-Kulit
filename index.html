@@ -398,6 +398,20 @@ function tierCapabilityNote(label, opDimLvl, tiers, gradeReq, opGradeLvl, opGrad
   return { text: 'Hanya mampu menangani '+label+' '+mampuStandalone.join(', ')+' — belum sanggup untuk '+label+' '+belumStandalone.join(', ')+'.', positive: false, mampu: mampuStandalone };
 }
 
+// ─── NEED UPGRADING (khusus grup Berpotensi Bisa) — poin saja ──────
+// Untuk tiap kategori yang gagal (gap > 0), sarankan skill up ke target
+// spesifik (nama item/kode yang diminta order).
+function computeNeedUpgrading(perCat, reqInfo){
+  const points = [];
+  perCat.forEach(p => {
+    if (p.gap > 0){
+      if (p.cat === 'Texture') points.push('Skill up Texture');
+      else points.push('Skill up '+displayLabel(p.cat)+' ke '+reqInfo[p.cat].label);
+    }
+  });
+  return points;
+}
+
 function computeWeaknesses(op, texturePerCat, status, reqInfo){
   const notes = [];
   if (op.Consumption === 1){
@@ -677,6 +691,7 @@ function runMatch(){
     }
     const texturePerCat = r.perCat.find(p => p.cat === 'Texture');
     r.weaknesses = computeWeaknesses(r.op, texturePerCat, r.status, reqInfo);
+    r.needUpgrading = computeNeedUpgrading(r.perCat, reqInfo);
   });
 
   let gapRecommend = [];
@@ -727,15 +742,17 @@ function renderMatchResult(){
     </div>
   ` : '';
 
-  const buildGroupRows = (group) => group.map(r => {
+  const buildGroupRows = (group, showNeedUpgrading) => group.map(r => {
     const meta = STATUS_META[r.status];
     const catCells = relevantCats.map(cat => '<td>'+r.narratives[cat]+'</td>').join('');
     const weaknessCell = '<td>'+(r.weaknesses.length ? r.weaknesses.map(n => (n.positive ? '✅ ' : '⚠️ ')+n.text).join('<br>') : '—')+'</td>';
+    const needUpgradingCell = showNeedUpgrading ? '<td>'+(r.needUpgrading.length ? '• '+r.needUpgrading.join('<br>• ') : '—')+'</td>' : '';
     return '<tr class="'+meta.rowClass+'">'
       + '<td class="name-cell">'+r.op.nama+'</td>'
       + '<td>'+r.op.absen+'</td>'
       + '<td><b>'+meta.dot+' '+meta.label+'</b></td>'
       + weaknessCell
+      + needUpgradingCell
       + catCells
       + '</tr>';
   }).join('');
@@ -744,6 +761,7 @@ function renderMatchResult(){
     const meta = STATUS_META[st];
     const n = counts[st];
     const isOpen = !!expandedGroups[st];
+    const showNeedUpgrading = st === 'berpotensi';
 
     const group = results.filter(r => r.status === st);
     const tableHtml = isOpen ? `
@@ -752,9 +770,10 @@ function renderMatchResult(){
           <thead><tr>
             <th>Nama</th><th>No. Absen</th><th>Status Untuk Order</th>
             <th>Weakness</th>
+            ${showNeedUpgrading ? '<th>Need Upgrading</th>' : ''}
             ${relevantCats.map(c=>'<th>'+displayLabel(c)+'</th>').join('')}
           </tr></thead>
-          <tbody>${buildGroupRows(group)}</tbody>
+          <tbody>${buildGroupRows(group, showNeedUpgrading)}</tbody>
         </table>
       </div>
     ` : '';
