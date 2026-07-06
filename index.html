@@ -374,20 +374,28 @@ function operatorLabelFor(op, cat){
 // digabung dengan Grade order kalau ada (skor gabungan), atau berdiri
 // sendiri kalau Grade tidak dipilih. Return {text, positive} — positive:true
 // artinya kabar baik (mampu semua tier), dipakai untuk pilih ikon di tabel.
-function tierCapabilityNote(label, opDimLvl, tiers, gradeReq, opGradeLvl){
+// Untuk status 'overskill', kalimat menonjolkan skill ASLI operator dulu
+// (mis. "Skill Grade operator ini AB, sehingga untuk order Grade D dia mampu...")
+function tierCapabilityNote(label, opDimLvl, tiers, gradeReq, opGradeLvl, opGradeCode, status){
   if (gradeReq){
     const combined = opGradeLvl + opDimLvl;
     const mampu = tiers.filter(t => combined >= gradeReq.level + t.level).map(t => t.code);
     const belum = tiers.filter(t => combined < gradeReq.level + t.level).map(t => t.code);
-    if (mampu.length === tiers.length) return { text: 'Untuk Grade '+gradeReq.label+', operator mampu menangani '+label+' '+tiers.map(t=>t.code).join(', ')+'.', positive: true };
-    if (mampu.length === 0) return { text: 'Untuk Grade '+gradeReq.label+', operator belum mampu menangani '+label+' '+tiers.map(t=>t.code).join(', ')+' — kombinasi Grade dan '+label+'-nya masih kurang.', positive: false };
-    return { text: 'Untuk Grade '+gradeReq.label+', operator mampu menangani '+label+' '+mampu.join(', ')+' — namun belum mampu untuk '+belum.join(', ')+'.', positive: false };
+
+    if (status === 'overskill'){
+      if (mampu.length === tiers.length) return { text: 'Skill Grade operator ini '+opGradeCode+', sehingga untuk order Grade '+gradeReq.label+' dia mampu menangani seluruh '+label+' ('+tiers.map(t=>t.code).join(', ')+').', positive: true, mampu };
+      if (mampu.length === 0) return { text: 'Meski skill Grade operator ini '+opGradeCode+', kombinasinya dengan '+label+' masih belum cukup untuk order Grade '+gradeReq.label+' — belum mampu menangani '+label+' manapun ('+tiers.map(t=>t.code).join(', ')+').', positive: false, mampu };
+      return { text: 'Skill Grade operator ini '+opGradeCode+', sehingga untuk order Grade '+gradeReq.label+' dia mampu menangani '+label+' '+mampu.join(', ')+' — namun belum untuk '+belum.join(', ')+'.', positive: false, mampu };
+    }
+    if (mampu.length === tiers.length) return { text: 'Untuk Grade '+gradeReq.label+', operator mampu menangani '+label+' '+tiers.map(t=>t.code).join(', ')+'.', positive: true, mampu };
+    if (mampu.length === 0) return { text: 'Untuk Grade '+gradeReq.label+', operator belum mampu menangani '+label+' '+tiers.map(t=>t.code).join(', ')+' — kombinasi Grade dan '+label+'-nya masih kurang.', positive: false, mampu };
+    return { text: 'Untuk Grade '+gradeReq.label+', operator mampu menangani '+label+' '+mampu.join(', ')+' — namun belum mampu untuk '+belum.join(', ')+'.', positive: false, mampu };
   }
   const mampuStandalone = tiers.filter(t => opDimLvl >= t.level).map(t => t.code);
   const belumStandalone = tiers.filter(t => opDimLvl < t.level).map(t => t.code);
-  if (mampuStandalone.length === tiers.length) return { text: 'Mampu menangani '+label+' '+tiers.map(t=>t.code).join(', ')+' (level '+label+' tertinggi).', positive: true };
-  if (mampuStandalone.length === 0) return { text: 'Belum paham '+label+' sama sekali — berisiko untuk '+label+' '+tiers.map(t=>t.code).join(', ')+'.', positive: false };
-  return { text: 'Hanya mampu menangani '+label+' '+mampuStandalone.join(', ')+' — belum sanggup untuk '+label+' '+belumStandalone.join(', ')+'.', positive: false };
+  if (mampuStandalone.length === tiers.length) return { text: 'Mampu menangani '+label+' '+tiers.map(t=>t.code).join(', ')+' (level '+label+' tertinggi).', positive: true, mampu: mampuStandalone };
+  if (mampuStandalone.length === 0) return { text: 'Belum paham '+label+' sama sekali — berisiko untuk '+label+' '+tiers.map(t=>t.code).join(', ')+'.', positive: false, mampu: mampuStandalone };
+  return { text: 'Hanya mampu menangani '+label+' '+mampuStandalone.join(', ')+' — belum sanggup untuk '+label+' '+belumStandalone.join(', ')+'.', positive: false, mampu: mampuStandalone };
 }
 
 function computeWeaknesses(op, texturePerCat, status, reqInfo){
@@ -404,11 +412,18 @@ function computeWeaknesses(op, texturePerCat, status, reqInfo){
 
     const softTiers = [ { code: 'S1', level: 3 }, { code: 'S2', level: 2 }, { code: 'S3', level: 1 } ];
     const opSoftLvl = codeLevel('Softness', op.softness);
-    notes.push(tierCapabilityNote('Softness', opSoftLvl, softTiers, gradeReq, opGradeLvl));
+    notes.push(tierCapabilityNote('Softness', opSoftLvl, softTiers, gradeReq, opGradeLvl, op.grade, status));
 
     const sizeTiers = KARAKTER['Size'].filter(x => !x.code.includes('Belum Paham')).map(x => ({ code: x.code, level: x.level }));
     const opSizeLvl = codeLevel('Size', op.size);
-    notes.push(tierCapabilityNote('Size', opSizeLvl, sizeTiers, gradeReq, opGradeLvl));
+    const sizeNote = tierCapabilityNote('Size', opSizeLvl, sizeTiers, gradeReq, opGradeLvl, op.grade, status);
+    notes.push(sizeNote);
+
+    // Analisa Thickness — beda per Size, jadi dicek terhadap Size yang
+    // operator ini mampu tangani (bukan cuma level Thickness berdiri sendiri).
+    if (op.thickness === 'Terlalu Tipis/Tebal' && sizeNote.mampu && sizeNote.mampu.length){
+      notes.push({ text: 'Hati-hati, operator akan memotong '+sizeNote.mampu.join(', ')+' meskipun ketebalannya tidak sesuai (level Thickness operator masih \'Terlalu Tipis/Tebal\').', positive: false });
+    }
   }
   return notes;
 }
@@ -442,6 +457,8 @@ let gapLog = [];           // riwayat order yang gagal total (tidak ada operator
 // TAB 1 — CEK KELAYAKAN OPERATOR
 // ══════════════════════════════════════════════════════════
 const GENERIC_DROPDOWN_CATS = CATS_NONKARAKTER.filter(c => c !== 'Texture');
+const LABEL_OVERRIDES = { 'Metode': 'Pola' }; // tampilan ke user saja, key data tetap 'Metode'
+function displayLabel(cat){ return LABEL_OVERRIDES[cat] || cat; }
 const STATUS_META = {
   optimal:    { label: 'Optimal',         rank: 0, rowClass: 'row-optimal',  dot: '🟢' },
   overskill:  { label: 'Overskill',       rank: 1, rowClass: 'row-layak',    dot: '🔵' },
@@ -501,11 +518,22 @@ function renderCekKelayakan(reset){
     </div>
   `;
 
+  const polaOptions = NON_KARAKTER['Metode'].map(x => '<option value="'+x.item+'">'+x.item+'</option>').join('');
+  const polaHtml = `
+    <div class="form-item">
+      <label class="form-label">Pola</label>
+      <select class="form-select" id="ord-Metode">
+        <option value="">— Tidak relevan (skip) —</option>
+        ${polaOptions}
+      </select>
+    </div>
+  `;
+
   document.getElementById('mainContent').innerHTML = `
     <h2 class="section-title">Cek Kelayakan Operator</h2>
-    <p class="section-desc">Tahap ini: kategori <b>Texture</b>, <b>Grade</b>, dan <b>Size</b>. Kategori lain menyusul satu per satu setelah kita bahas logicnya masing-masing.</p>
+    <p class="section-desc">Tahap ini: kategori <b>Texture</b>, <b>Grade</b>, <b>Size</b>, dan <b>Pola</b>. Kategori lain menyusul satu per satu setelah kita bahas logicnya masing-masing.</p>
     <div class="form-card">
-      <div class="form-grid">${textureHtml}${gradeHtml}${sizeHtml}</div>
+      <div class="form-grid">${textureHtml}${gradeHtml}${sizeHtml}${polaHtml}</div>
       <div style="margin-top:14px;display:flex;gap:8px">
         <button class="btn btn-primary" onclick="runMatch()">Cek Kelayakan</button>
         <button class="btn btn-ghost" onclick="renderCekKelayakan(true)">Reset Form</button>
@@ -527,8 +555,9 @@ function narrativeTexture(op, req){
 function narrativeGeneric(cat, op, req){
   if (!req) return 'Tidak relevan dengan order ini.';
   const opLvl = op[cat];
-  if (opLvl >= req.level) return 'Kemampuan '+cat+' operator (level '+opLvl+') sudah memenuhi kebutuhan order (level '+req.level+' — '+req.label+').';
-  return 'Hati-hati, '+cat+' operator baru level '+opLvl+', sedangkan order butuh level '+req.level+' ('+req.label+') — kurang '+(req.level-opLvl)+' level.';
+  const label = displayLabel(cat);
+  if (opLvl >= req.level) return 'Kemampuan '+label+' operator (level '+opLvl+') sudah memenuhi kebutuhan order (level '+req.level+' — '+req.label+').';
+  return 'Hati-hati, '+label+' operator baru level '+opLvl+', sedangkan order butuh level '+req.level+' ('+req.label+') — kurang '+(req.level-opLvl)+' level.';
 }
 function narrativeGradeSize(cat, op, req){
   if (!req) return 'Tidak relevan dengan order ini.';
@@ -593,7 +622,13 @@ function runMatch(){
     };
   }
 
-  // Kategori lain (Consumption, Metode, Serat Kulit, Pcs Warna, Pair Warna,
+  // Pola / Metode (aktif — label tampilan "Pola", key data tetap "Metode")
+  const polaVal = document.getElementById('ord-Metode').value;
+  if (polaVal){
+    reqInfo['Metode'] = { level: itemLevel('Metode', polaVal), label: polaVal };
+  }
+
+  // Kategori lain (Consumption, Serat Kulit, Pcs Warna, Pair Warna,
   // Softness, Thickness) belum ada di form — akan diaktifkan
   // kembali satu per satu. Uncomment blok di bawah saat gilirannya tiba:
   //
@@ -717,7 +752,7 @@ function renderMatchResult(){
           <thead><tr>
             <th>Nama</th><th>No. Absen</th><th>Status Untuk Order</th>
             <th>Weakness</th>
-            ${relevantCats.map(c=>'<th>'+c+'</th>').join('')}
+            ${relevantCats.map(c=>'<th>'+displayLabel(c)+'</th>').join('')}
           </tr></thead>
           <tbody>${buildGroupRows(group)}</tbody>
         </table>
