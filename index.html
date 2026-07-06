@@ -177,6 +177,9 @@
   <div class="appbar-right">
     <div class="live-badge"><div class="live-dot" id="liveDot"></div><span id="liveBadgeText">Menyambungkan ke Google Sheets...</span></div>
     <span class="mono" id="dateNow" style="font-size:11px;color:var(--text-3)"></span>
+    <button id="fullscreenBtn" onclick="toggleFullscreen()" title="Full Screen" aria-label="Full Screen" style="background:none;border:1px solid var(--border-strong);border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--text-3);cursor:pointer">
+      <svg id="fullscreenIcon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+    </button>
   </div>
 </div>
 
@@ -338,6 +341,28 @@ const CATS_KARAKTER_MANUAL = ['Softness','Thickness'];
 const ALL_CATS = [...CATS_NONKARAKTER, ...CATS_KARAKTER_DROPDOWN, ...CATS_KARAKTER_MANUAL];
 
 document.getElementById('dateNow').textContent = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+
+// ─── FULL SCREEN TOGGLE ─────────────────────────────────────
+const ICON_ENTER_FS = '<path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>';
+const ICON_EXIT_FS = '<path d="M9 3v3a2 2 0 01-2 2H4M20 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3m9-5h3a2 2 0 002-2v-3"/>';
+function toggleFullscreen(){
+  if (!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+document.addEventListener('fullscreenchange', () => {
+  const icon = document.getElementById('fullscreenIcon');
+  const btn = document.getElementById('fullscreenBtn');
+  if (document.fullscreenElement){
+    icon.innerHTML = ICON_EXIT_FS;
+    btn.title = 'Keluar Full Screen';
+  } else {
+    icon.innerHTML = ICON_ENTER_FS;
+    btn.title = 'Full Screen';
+  }
+});
 
 // ─── LEVEL LOOKUP HELPERS ──────────────────────────────────
 function itemLevel(cat, itemName){
