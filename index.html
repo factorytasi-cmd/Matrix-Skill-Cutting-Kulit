@@ -437,25 +437,14 @@ function computeNeedUpgrading(perCat, reqInfo){
   return points;
 }
 
-function computeWeaknesses(op, perCat, status, reqInfo){
+function computeWeaknesses(op, texturePerCat, status, reqInfo){
   const notes = [];
-
   if (op.Consumption === 1){
     notes.push({ text: 'Consumption material operator ini boros (level 1) — perlu diawasi saat cutting untuk order ini.', positive: false });
   }
-
-  // Analisa "pas-pasan" (buffer 0) — generik untuk kategori manapun yang
-  // relevan di order ini. Pair Warna dapat nada lebih tegas karena tersulit.
-  const MEPET_CHECK_CATS = ['Texture', 'Pcs Warna', 'Pair Warna', 'Serat Kulit'];
-  perCat.forEach(p => {
-    if (!MEPET_CHECK_CATS.includes(p.cat) || !p.ok || p.buffer !== 0) return;
-    if (p.cat === 'Pair Warna'){
-      notes.push({ text: 'Level Pair Warna operator pas-pasan dengan kebutuhan order ini — Pair Warna termasuk kategori tersulit karena warna harus konsisten pada sepasang produk, risiko tinggi kalau ada variasi.', positive: false });
-    } else {
-      notes.push({ text: 'Level '+displayLabel(p.cat)+' operator pas-pasan dengan kebutuhan order ini (tanpa margin) — perlu diawasi.', positive: false });
-    }
-  });
-
+  if (texturePerCat && texturePerCat.ok && texturePerCat.buffer === 0){
+    notes.push({ text: 'Level Texture operator pas-pasan dengan kebutuhan order ini (tanpa margin) — berisiko kalau ada variasi kualitas kulit.', positive: false });
+  }
   if (status === 'optimal' || status === 'overskill'){
     const opGradeLvl = codeLevel('Grade', op.grade);
     const gradeReq = reqInfo && reqInfo['Grade'];
@@ -579,39 +568,11 @@ function renderCekKelayakan(reset){
     </div>
   `;
 
-  const warnaHtml = `
-    <div class="form-item">
-      <label class="form-label">Jenis Kebutuhan Warna</label>
-      <select class="form-select" id="ord-warnaJenis" onchange="updateWarnaDetailOptions()">
-        <option value="">— Tidak relevan (skip) —</option>
-        <option value="Pcs Warna">Pcs Warna</option>
-        <option value="Pair Warna">Pair Warna (lebih sulit)</option>
-      </select>
-    </div>
-    <div class="form-item">
-      <label class="form-label">Detail Level Warna</label>
-      <select class="form-select" id="ord-warnaDetail" disabled>
-        <option value="">— Pilih jenis dulu —</option>
-      </select>
-    </div>
-  `;
-
-  const seratOptions = NON_KARAKTER['Serat Kulit'].map(x => '<option value="'+x.item+'">'+x.item+' (level '+x.level+')</option>').join('');
-  const seratHtml = `
-    <div class="form-item">
-      <label class="form-label">Serat Kulit</label>
-      <select class="form-select" id="ord-Serat_Kulit">
-        <option value="">— Tidak relevan (skip) —</option>
-        ${seratOptions}
-      </select>
-    </div>
-  `;
-
   document.getElementById('mainContent').innerHTML = `
     <h2 class="section-title">Cek Kelayakan Operator</h2>
-    <p class="section-desc">Tahap ini: kategori <b>Texture</b>, <b>Grade</b>, <b>Size</b>, <b>Pola</b>, <b>Warna</b> (Pcs/Pair — pilih salah satu), dan <b>Serat Kulit</b>. Kategori lain menyusul satu per satu setelah kita bahas logicnya masing-masing.</p>
+    <p class="section-desc">Tahap ini: kategori <b>Texture</b>, <b>Grade</b>, <b>Size</b>, dan <b>Pola</b>. Kategori lain menyusul satu per satu setelah kita bahas logicnya masing-masing.</p>
     <div class="form-card">
-      <div class="form-grid">${textureHtml}${gradeHtml}${sizeHtml}${polaHtml}${warnaHtml}${seratHtml}</div>
+      <div class="form-grid">${textureHtml}${gradeHtml}${sizeHtml}${polaHtml}</div>
       <div style="margin-top:14px;display:flex;gap:8px">
         <button class="btn btn-primary" onclick="runMatch()">Cek Kelayakan</button>
         <button class="btn btn-ghost" onclick="renderCekKelayakan(true)">Reset Form</button>
@@ -620,19 +581,6 @@ function renderCekKelayakan(reset){
     <div id="matchResult"></div>
   `;
   if (lastMatch) renderMatchResult();
-}
-
-function updateWarnaDetailOptions(){
-  const jenis = document.getElementById('ord-warnaJenis').value;
-  const detailSelect = document.getElementById('ord-warnaDetail');
-  if (!jenis){
-    detailSelect.innerHTML = '<option value="">— Pilih jenis dulu —</option>';
-    detailSelect.disabled = true;
-    return;
-  }
-  const items = NON_KARAKTER[jenis];
-  detailSelect.innerHTML = '<option value="">— Pilih level —</option>' + items.map(x => '<option value="'+x.item+'">'+x.item+' (level '+x.level+')</option>').join('');
-  detailSelect.disabled = false;
 }
 
 // ─── NARRATIVE GENERATORS ───────────────────────────────────
@@ -719,20 +667,7 @@ function runMatch(){
     reqInfo['Metode'] = { level: itemLevel('Metode', polaVal), label: polaVal };
   }
 
-  // Warna: Pcs Warna / Pair Warna (aktif, saling eksklusif)
-  const warnaJenis = document.getElementById('ord-warnaJenis').value;
-  const warnaDetail = document.getElementById('ord-warnaDetail').value;
-  if (warnaJenis && warnaDetail){
-    reqInfo[warnaJenis] = { level: itemLevel(warnaJenis, warnaDetail), label: warnaDetail };
-  }
-
-  // Serat Kulit (aktif)
-  const seratVal = document.getElementById('ord-Serat_Kulit').value;
-  if (seratVal){
-    reqInfo['Serat Kulit'] = { level: itemLevel('Serat Kulit', seratVal), label: seratVal };
-  }
-
-  // Kategori lain (Consumption,
+  // Kategori lain (Consumption, Serat Kulit, Pcs Warna, Pair Warna,
   // Softness, Thickness) belum ada di form — akan diaktifkan
   // kembali satu per satu. Uncomment blok di bawah saat gilirannya tiba:
   //
@@ -779,7 +714,8 @@ function runMatch(){
     } else {
       r.status = r.totalGap <= 2 ? 'berpotensi' : 'tidak';
     }
-    r.weaknesses = computeWeaknesses(r.op, r.perCat, r.status, reqInfo);
+    const texturePerCat = r.perCat.find(p => p.cat === 'Texture');
+    r.weaknesses = computeWeaknesses(r.op, texturePerCat, r.status, reqInfo);
     r.needUpgrading = computeNeedUpgrading(r.perCat, reqInfo);
   });
 
