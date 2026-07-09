@@ -254,6 +254,7 @@
 let NON_KARAKTER = {};
 let KARAKTER = {};
 let OPERATORS = [];
+let ORDERS = [];
 let lastSyncTime = null;
 let dataReady = false;
 
@@ -261,7 +262,8 @@ const SHEET_ID = '1kpXZSRkwIUl1Qhljr1P3FlXyfuv16ARf2mmI8JT5dhw';
 const SHEET_NAMES = {
   nonKarakter: 'Kode Non Karakter',
   karakter: 'Penjelasan mengenai karakter kulit',
-  operator: 'Skill Matrix Operator'
+  operator: 'Skill Matrix Operator',
+  order: 'Style & Kategori'
 };
 function gvizUrl(sheetName){
   return 'https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(sheetName);
@@ -331,15 +333,42 @@ function buildOperators(rows){
   }
   return result;
 }
+function buildOrders(rows){
+  const header = (rows[0] || []).map(h => (h || '').trim());
+  const idx = (name) => header.indexOf(name);
+  const iNama = idx('Nama Order'), iTexTol = idx('Texture Toleransi'), iTexItem = idx('Texture Item Ditoleransi'),
+        iGrade = idx('Grade'), iSize = idx('Size'), iPola = idx('Pola'), iJenisWarna = idx('Jenis Warna'),
+        iDetailWarna = idx('Detail Warna'), iSerat = idx('Serat Kulit');
+  const result = [];
+  for (let i = 1; i < rows.length; i++){
+    const row = rows[i];
+    const nama = row[iNama];
+    if (!nama) continue;
+    result.push({
+      nama: nama.trim(),
+      textureToleransi: (row[iTexTol] || '').trim(),
+      textureItems: (row[iTexItem] || '').split(',').map(s => s.trim()).filter(Boolean),
+      grade: (row[iGrade] || '').trim(),
+      size: (row[iSize] || '').trim(),
+      pola: (row[iPola] || '').trim(),
+      jenisWarna: (row[iJenisWarna] || '').trim(),
+      detailWarna: (row[iDetailWarna] || '').trim(),
+      seratKulit: (row[iSerat] || '').trim()
+    });
+  }
+  return result;
+}
 async function loadAllData(){
-  const [nonKarRows, karRows, opRows] = await Promise.all([
+  const [nonKarRows, karRows, opRows, orderRows] = await Promise.all([
     fetchSheetRows(SHEET_NAMES.nonKarakter),
     fetchSheetRows(SHEET_NAMES.karakter),
-    fetchSheetRows(SHEET_NAMES.operator)
+    fetchSheetRows(SHEET_NAMES.operator),
+    fetchSheetRows(SHEET_NAMES.order)
   ]);
   NON_KARAKTER = buildNonKarakter(nonKarRows);
   KARAKTER = buildKarakter(karRows);
   OPERATORS = buildOperators(opRows);
+  ORDERS = buildOrders(orderRows);
   lastSyncTime = new Date();
 }
 function updateLiveBadge(ok){
@@ -546,6 +575,29 @@ function renderCekKelayakan(reset){
   // Kode generic-nya (GENERIC_DROPDOWN_CATS dkk) tetap ada di bawah, tinggal
   // di-uncomment & ditambahkan ke form-grid saat gilirannya tiba.
 
+  const orderOptions = ORDERS.map(o => '<option value="'+o.nama+'">'+o.nama+'</option>').join('');
+  const orderModeHtml = `
+    <div class="form-item" style="grid-column:1/-1;padding-bottom:10px;border-bottom:1px solid var(--border-strong);margin-bottom:4px">
+      <label class="form-label">Jenis Order</label>
+      <select class="form-select" id="ord-mode" onchange="toggleOrderMode()" style="max-width:260px">
+        <option value="baru">Order Baru</option>
+        <option value="repeat">Repeat Order</option>
+      </select>
+      <div id="orderBaruWrap" style="margin-top:8px">
+        <label class="form-label">Nama Order Baru</label>
+        <input type="text" class="form-select" id="ord-namaBaru" placeholder="Misal: Stablegrip Natural Fit 2026" style="max-width:340px">
+        <div style="font-size:9.5px;color:var(--text-4);margin-top:4px">Belum otomatis tercatat ke Google Sheets — fitur simpan menyusul.</div>
+      </div>
+      <div id="orderRepeatWrap" style="margin-top:8px;display:none">
+        <label class="form-label">Pilih Order</label>
+        <select class="form-select" id="ord-repeatSelect" onchange="applyRepeatOrder()" style="max-width:340px">
+          <option value="">— Pilih order —</option>
+          ${orderOptions}
+        </select>
+      </div>
+    </div>
+  `;
+
   const textureChecks = NON_KARAKTER['Texture'].map((x,idx) =>
     '<label style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--text-2)"><input type="checkbox" id="tex-chk-'+idx+'"> '+x.item+' (level '+x.level+')</label>'
   ).join('');
@@ -632,7 +684,7 @@ function renderCekKelayakan(reset){
     <h2 class="section-title">Cek Kelayakan Operator</h2>
     <p class="section-desc">Tahap ini: kategori <b>Texture</b>, <b>Grade</b>, <b>Size</b>, <b>Pola</b>, <b>Warna</b> (Pcs/Pair — pilih salah satu), dan <b>Serat Kulit</b>. Kategori lain menyusul satu per satu setelah kita bahas logicnya masing-masing.</p>
     <div class="form-card">
-      <div class="form-grid">${textureHtml}${gradeHtml}${sizeHtml}${polaHtml}${warnaHtml}${seratHtml}</div>
+      <div class="form-grid">${orderModeHtml}${textureHtml}${gradeHtml}${sizeHtml}${polaHtml}${warnaHtml}${seratHtml}</div>
       <div style="margin-top:14px;display:flex;gap:8px">
         <button class="btn btn-primary" onclick="runMatch()">Cek Kelayakan</button>
         <button class="btn btn-ghost" onclick="renderCekKelayakan(true)">Reset Form</button>
@@ -654,6 +706,67 @@ function updateWarnaDetailOptions(){
   const items = NON_KARAKTER[jenis];
   detailSelect.innerHTML = '<option value="">— Pilih level —</option>' + items.map(x => '<option value="'+x.item+'">'+x.item+' (level '+x.level+')</option>').join('');
   detailSelect.disabled = false;
+}
+
+function toggleOrderMode(){
+  const mode = document.getElementById('ord-mode').value;
+  document.getElementById('orderBaruWrap').style.display = mode === 'baru' ? 'block' : 'none';
+  document.getElementById('orderRepeatWrap').style.display = mode === 'repeat' ? 'block' : 'none';
+}
+
+function applyRepeatOrder(){
+  const namaOrder = document.getElementById('ord-repeatSelect').value;
+  if (!namaOrder) return;
+  const order = ORDERS.find(o => o.nama === namaOrder);
+  if (!order) return;
+
+  // Texture
+  const tolYa = order.textureToleransi.toLowerCase() === 'ya';
+  document.getElementById('ord-textureToleransi').value = tolYa ? 'ya' : 'tidak';
+  document.getElementById('textureChecklistWrap').style.display = tolYa ? 'block' : 'none';
+  NON_KARAKTER['Texture'].forEach((it, idx) => {
+    const el = document.getElementById('tex-chk-'+idx);
+    if (el) el.checked = tolYa && order.textureItems.includes(it.item);
+  });
+
+  // Grade
+  const gradeEl = document.getElementById('ord-Grade');
+  if (gradeEl) gradeEl.value = order.grade || '';
+
+  // Size — dukung shorthand "Regular" (artinya semua size Regular, bukan Ledies-S) dan "All Size"
+  const sizeItems = KARAKTER['Size'].filter(x => !x.code.includes('Belum Paham'));
+  const allSizeEl = document.getElementById('size-chk-all');
+  const sizeVal = order.size;
+  let selectedCodes = [];
+  if (sizeVal.toLowerCase() === 'all size'){
+    selectedCodes = sizeItems.map(x => x.code);
+  } else if (sizeVal.toLowerCase() === 'regular' || sizeVal.toLowerCase() === 'reguler'){
+    selectedCodes = sizeItems.filter(x => x.code !== 'Ledies - S').map(x => x.code);
+  } else if (sizeVal){
+    selectedCodes = sizeVal.split(',').map(s => s.trim());
+  }
+  const isAllSize = selectedCodes.length === sizeItems.length;
+  allSizeEl.checked = isAllSize;
+  sizeItems.forEach((x, idx) => {
+    const el = document.getElementById('size-chk-'+idx);
+    if (!el) return;
+    el.disabled = isAllSize;
+    el.checked = selectedCodes.includes(x.code);
+  });
+
+  // Pola
+  const polaEl = document.getElementById('ord-Metode');
+  if (polaEl) polaEl.value = order.pola || '';
+
+  // Warna
+  const warnaJenisEl = document.getElementById('ord-warnaJenis');
+  warnaJenisEl.value = order.jenisWarna || '';
+  updateWarnaDetailOptions();
+  if (order.jenisWarna) document.getElementById('ord-warnaDetail').value = order.detailWarna || '';
+
+  // Serat Kulit
+  const seratEl = document.getElementById('ord-Serat_Kulit');
+  if (seratEl) seratEl.value = order.seratKulit || '';
 }
 
 // ─── NARRATIVE GENERATORS ───────────────────────────────────
